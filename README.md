@@ -89,7 +89,71 @@ MesaChain's architecture consists of three main components:
 - **🌐 Multi-location Support**: Manage multiple establishments from one dashboard
 - **🔌 Supplier Integration**: Streamline ordering and payment processes
 
-## 🗓️ Development Roadmap
+## Setting Up the Frontend
 
-### Phase 1 (Months 1-3): Basic MVP Development
-- Core management system (inventory
+Navigate to the frontend directory and install dependencies:
+
+```bash
+cd apps/frontend
+pnpm install
+```
+
+Build the frontend application:
+
+```bash
+npm run build
+```
+
+Start the frontend application:
+
+```bash
+npm run start
+```
+
+The frontend application should now be running at [http://localhost:3000](http://localhost:3000).
+
+---
+
+## Setting Up the Backend
+
+Open a new terminal window, navigate to the root of the project, and then to the backend directory:
+
+```bash
+cd apps/backend
+pnpm install
+```
+
+Build the backend application:
+
+```bash
+npm run build
+```
+
+Start the backend application:
+
+```bash
+npm run start
+```
+
+The backend API should now be running at [http://localhost:5000](http://localhost:5000).
+
+---
+
+## 🚀 Development Workflow
+
+After the initial setup, you can use the following commands for development:
+
+- `npm run dev` - Start the application in development mode with hot reloading
+- `npm run test` - Run the test suite
+- `npm run lint` - Run the linter to check code quality
+
+---
+
+## ❓ Troubleshooting
+
+If you encounter any dependency issues, try deleting the `node_modules` folder and the `pnpm-lock.yaml` file, then run `pnpm install` again.
+
+Make sure you have the correct versions of Node.js and pnpm installed.
+
+Check the project documentation for any specific environment variables that need to be set.
+
