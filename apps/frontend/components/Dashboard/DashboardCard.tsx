@@ -5,8 +5,8 @@ interface DashboardCardProps {
   title: string;
   value: string;
   percentageChange: string;
-  icon: string; // URL del icono
-  color: string; // Color para la barra de progreso
+  icon: React.ReactNode;
+  color: string;
 }
 
 const DashboardCard: React.FC<DashboardCardProps> = ({ title, value, percentageChange, icon, color }) => {
@@ -14,7 +14,7 @@ const DashboardCard: React.FC<DashboardCardProps> = ({ title, value, percentageC
     <div className="bg-white p-6 rounded shadow">
       <div className="flex justify-between items-center">
         <h2 className="text-lg font-semibold">{title}</h2>
-        <img src={icon} alt={title} className="h-8 w-8" />
+        {icon}
       </div>
       <p className="text-3xl font-bold mt-3">{value}</p>
       <p className="text-gray-500">{percentageChange}</p>

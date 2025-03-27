@@ -6,14 +6,14 @@ interface TransactionItemProps {
   time: string;
   amount: string;
   paymentMethod: string;
-  icon: string; // URL del icono
+  icon: React.ReactNode;
 }
 
 const TransactionItem: React.FC<TransactionItemProps> = ({ table, time, amount, paymentMethod, icon }) => {
   return (
     <li className="flex justify-between items-center bg-white p-4">
       <div className="flex items-center justify-center w-10 h-10 bg-green-300 rounded-full mr-2">
-        <img src={icon} alt="Order" className="h-6 w-6" />
+        {icon}
       </div>
       <div className="flex flex-col flex-1">
         <span>{table}</span>

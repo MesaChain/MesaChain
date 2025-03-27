@@ -1,9 +1,5 @@
 "use client";
-import dolar from '../../images/dolar.png';
-import bag from "../../images/bag.png";
-import user from "../../images/user.png";
-import card from "../../images/card.png";
-import trend from "../../images/trend.png";
+import { DollarSign, CreditCard, ShoppingBag, User, TrendingUp } from 'lucide-react';
 import DashboardCard from './DashboardCard';
 import TransactionItem from './TransactionItem';
 
@@ -19,28 +15,28 @@ const Dashboard = () => {
       title: 'Total Revenue',
       value: '$45,231.89',
       percentageChange: '+20.1% from last month',
-      icon: dolar.src,
+      icon: DollarSign,
       color: 'bg-green-600',
     },
     {
       title: 'Crypto Payments',
       value: '$12,234.50',
       percentageChange: '+35.2% from last month',
-      icon: card.src,
+      icon: CreditCard,
       color: 'bg-purple-600',
     },
     {
       title: 'Active Orders',
       value: '+573',
       percentageChange: '+12.4% from last month',
-      icon: bag.src,
+      icon: ShoppingBag,
       color: 'bg-blue-600',
     },
     {
       title: 'Active Customers',
       value: '+2,350',
       percentageChange: '+18.1% from last month',
-      icon: user.src,
+      icon: User,
       color: 'bg-yellow-600',
     },
   ];
@@ -51,21 +47,21 @@ const Dashboard = () => {
       time: '2 hours ago',
       amount: '+$125.00',
       paymentMethod: 'Bitcoin',
-      icon: trend.src,
+      icon: TrendingUp,
     },
     {
       table: 'Table 5 - Dinner Order',
       time: '4 hours ago',
       amount: '+$89.50',
       paymentMethod: 'Cash',
-      icon: trend.src,
+      icon: TrendingUp,
     },
     {
       table: 'Table 8 - Lunch Order',
       time: '6 hours ago',
       amount: '+$67.25',
       paymentMethod: 'Ethereum',
-      icon: trend.src,
+      icon: TrendingUp,
     },
   ];
 
@@ -99,7 +95,7 @@ const Dashboard = () => {
             title={card.title}
             value={card.value}
             percentageChange={card.percentageChange}
-            icon={card.icon}
+            icon={React.createElement(card.icon) as React.ReactNode}
             color={card.color}
           />
         ))}
@@ -123,7 +119,7 @@ const Dashboard = () => {
               time={transaction.time}
               amount={transaction.amount}
               paymentMethod={transaction.paymentMethod}
-              icon={transaction.icon}
+              icon={React.createElement(transaction.icon) as React.ReactNode}
             />
           ))}
         </ul>
