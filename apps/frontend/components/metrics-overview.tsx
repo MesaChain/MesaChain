@@ -20,31 +20,8 @@ export function MetricsOverview({ metrics }) {
               <ArrowUpRight className="mr-1 h-3 w-3 text-emerald-500" />
               <span className="text-emerald-500">{metrics.transactionGrowth}%</span> from previous period
             </div>
-            <div className="mt-4 h-[80px]">
-              <ChartContainer
-                config={{
-                  transactions: {
-                    label: "Transactions",
-                    color: "hsl(var(--chart-1))",
-                  },
-                }}
-              >
-                <AreaChart data={metrics.transactionTrend}>
-                  <defs>
-                    <linearGradient id="colorTransactions" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="hsl(var(--chart-1))" stopOpacity={0.8} />
-                      <stop offset="95%" stopColor="hsl(var(--chart-1))" stopOpacity={0} />
-                    </linearGradient>
-                  </defs>
-                  <Area
-                    type="monotone"
-                    dataKey="value"
-                    stroke="hsl(var(--chart-1))"
-                    fillOpacity={1}
-                    fill="url(#colorTransactions)"
-                  />
-                </AreaChart>
-              </ChartContainer>
+            <div className="mt-4 h-[80px] bg-red-400">
+           
             </div>
           </CardContent>
         </Card>
