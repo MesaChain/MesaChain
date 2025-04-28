@@ -23,11 +23,13 @@
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "recharts": "^2.15.3",
+    "react-icons": "^5.5.0",
     "tailwind-merge": "^3.0.2",
     "tw-animate-css": "^1.2.4"
   },
   "devDependencies": {
     "@types/jest": "^29.5.12",
+    "@types/lodash": "^4.17.16",
     "@types/node": "^20.11.19",
     "@types/react": "^18.2.57",
     "@types/react-dom": "^18.2.19",
@@ -37,5 +39,8 @@
     "tailwindcss": "3",
     "ts-jest": "^29.1.2",
     "typescript": "^5.3.3"
+  },
+  "compilerOptions": {
+    "jsx": "react"
   }
 }
