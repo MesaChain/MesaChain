@@ -19,7 +19,9 @@ export default function RootLayout({
     <html lang="en">
       <body className={inter.className}>
         <Sidebar />
+        <div className="md:ml-20">
         {children}
+        </div>
       </body>
     </html>
   );

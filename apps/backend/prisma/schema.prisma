@@ -39,3 +39,72 @@ model RefreshToken {
 
   @@index([userId])
 } 
+
+
+model Metric {
+  id          String   @id @default(uuid())
+  name        String
+  description String
+  category    String
+  metadata    Json
+  unit        String
+  dataType    String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  timeSeriesData TimeSeriesData[]
+  aggregations   MetricAggregation[]
+}
+
+model TimeSeriesData {
+  id        String   @id @default(uuid())
+  metricId  String
+  timestamp DateTime
+  value     Float
+  tags      Json?
+  createdAt DateTime @default(now())
+
+  metric Metric @relation(fields: [metricId], references: [id])
+
+  @@index([metricId, timestamp])
+}
+
+model MetricAggregation {
+  id        String   @id @default(uuid())
+  metricId  String
+  startTime DateTime
+  endTime   DateTime
+  interval  String
+  min       Float
+  max       Float
+  avg       Float
+  sum       Float
+  count     Int
+  tags      Json?
+  createdAt DateTime @default(now())
+
+  metric Metric @relation(fields: [metricId], references: [id])
+
+  @@index([metricId, interval, startTime])
+}
+
+model Report {
+  id          String   @id @default(uuid())
+  name        String
+  description String?
+  query       String
+  parameters  Json?
+  schedule    String?  // Cron expression
+  format      ReportFormat
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+enum ReportFormat {
+  PDF
+  CSV
+  EXCEL
+  JSON
+  HTML
+}

@@ -20,9 +20,32 @@ export function MetricsOverview({ metrics }) {
               <ArrowUpRight className="mr-1 h-3 w-3 text-emerald-500" />
               <span className="text-emerald-500">{metrics.transactionGrowth}%</span> from previous period
             </div>
-            <div className="mt-4 h-[80px] bg-red-400">
-           
-            </div>
+            {/* <div className="mt-4 h-[80px] overflow-hidden"> */}
+              <ChartContainer
+                config={{
+                  transactions: {
+                    label: "Transactions",
+                    color: "hsl(var(--chart-1))",
+                  },
+                }}
+              >
+                <AreaChart data={metrics.transactionTrend}>
+                  <defs>
+                    <linearGradient id="colorTransactions" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="hsl(var(--chart-1))" stopOpacity={0.8} />
+                      <stop offset="95%" stopColor="hsl(var(--chart-1))" stopOpacity={0} />
+                    </linearGradient>
+                  </defs>
+                  <Area
+                    type="monotone"
+                    dataKey="value"
+                    stroke="hsl(var(--chart-1))"
+                    fillOpacity={1}
+                    fill="url(#colorTransactions)"
+                  />
+                </AreaChart>
+              </ChartContainer>
+            {/* </div> */}
           </CardContent>
         </Card>
 
@@ -37,7 +60,7 @@ export function MetricsOverview({ metrics }) {
               <ArrowUpRight className="mr-1 h-3 w-3 text-emerald-500" />
               <span className="text-emerald-500">{metrics.userGrowth}%</span> from previous period
             </div>
-            <div className="mt-4 h-[80px]">
+            {/* <div className="mt-4 h-[80px] overflow-hidden"> */}
               <ChartContainer
                 config={{
                   users: {
@@ -50,7 +73,7 @@ export function MetricsOverview({ metrics }) {
                   <Line type="monotone" dataKey="value" stroke="hsl(var(--chart-2))" strokeWidth={2} />
                 </LineChart>
               </ChartContainer>
-            </div>
+            {/* </div> */}
           </CardContent>
         </Card>
 
@@ -65,7 +88,7 @@ export function MetricsOverview({ metrics }) {
               <ArrowUpRight className="mr-1 h-3 w-3 text-emerald-500" />
               <span className="text-emerald-500">{metrics.revenueGrowth}%</span> from previous period
             </div>
-            <div className="mt-4 h-[80px]">
+            {/* <div className="mt-4 h-[80px] overflow-hidden"> */}
               <ChartContainer
                 config={{
                   revenue: {
@@ -90,7 +113,7 @@ export function MetricsOverview({ metrics }) {
                   />
                 </AreaChart>
               </ChartContainer>
-            </div>
+            {/* </div> */}
           </CardContent>
         </Card>
 
@@ -105,7 +128,7 @@ export function MetricsOverview({ metrics }) {
               <ArrowUpRight className="mr-1 h-3 w-3 text-emerald-500 rotate-180" />
               <span className="text-emerald-500">-{metrics.responseImprovement}%</span> from previous period
             </div>
-            <div className="mt-4 h-[80px]">
+            {/* <div className="mt-4 h-[80px] overflow-hidden"> */}
               <ChartContainer
                 config={{
                   response: {
@@ -118,7 +141,7 @@ export function MetricsOverview({ metrics }) {
                   <Line type="monotone" dataKey="value" stroke="hsl(var(--chart-4))" strokeWidth={2} />
                 </LineChart>
               </ChartContainer>
-            </div>
+            {/* </div> */}
           </CardContent>
         </Card>
       </div>
@@ -129,7 +152,6 @@ export function MetricsOverview({ metrics }) {
             <CardTitle>Transaction Volume</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="h-[300px]">
               <ChartContainer
                 config={{
                   completed: {
@@ -156,7 +178,7 @@ export function MetricsOverview({ metrics }) {
                   <Bar dataKey="failed" stackId="a" fill="var(--color-failed)" radius={[4, 4, 0, 0]} />
                 </BarChart>
               </ChartContainer>
-            </div>
+            
           </CardContent>
         </Card>
       </div>
