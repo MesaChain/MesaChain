@@ -7,10 +7,50 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+enum ReservationStatus {
+  PENDING
+  CONFIRMED
+  CANCELLED
+  COMPLETED
+}
+
+model Table {
+  id          String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name        String         @unique
+  capacity    Int
+  location    String
+  reservations Reservation[]
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+
+  @@map("tables")
+}
+
+model Reservation {
+  id          String            @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId      String            @db.Uuid
+  tableId     String            @db.Uuid
+  startTime   DateTime
+  endTime     DateTime
+  partySize   Int
+  status      ReservationStatus @default(PENDING)
+  table       Table             @relation(fields: [tableId], references: [id])
+  user        User              @relation(fields: [userId], references: [id])
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+
+  @@unique([tableId, startTime, endTime])
+  @@map("reservations")
+}
+
 model User {
-  id        String   @id @default(uuid())
-  email     String   @unique
-  name      String?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id          String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  email       String         @unique
+  password    String
+  name        String
+  reservations Reservation[]
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+
+  @@map("users")
 } 

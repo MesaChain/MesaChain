@@ -16,6 +16,13 @@ enum UserRole {
   CUSTOMER
 }
 
+enum ReservationStatus {
+  PENDING
+  CONFIRMED
+  CANCELLED
+  COMPLETED
+}
+
 model User {
   id            String    @id @default(uuid())
   email         String    @unique
@@ -26,6 +33,7 @@ model User {
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
   refreshTokens RefreshToken[]
+  reservations  Reservation[]
 }
 
 model RefreshToken {
@@ -39,4 +47,32 @@ model RefreshToken {
   updatedAt DateTime @updatedAt
 
   @@index([userId])
+}
+
+model Table {
+  id        String   @id @default(uuid())
+  name      String   @unique
+  capacity  Int
+  location  String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  reservations Reservation[]
+}
+
+model Reservation {
+  id          String           @id @default(uuid())
+  userId      String
+  user        User            @relation(fields: [userId], references: [id])
+  tableId     String
+  table       Table           @relation(fields: [tableId], references: [id])
+  startTime   DateTime
+  endTime     DateTime
+  partySize   Int
+  status      ReservationStatus @default(PENDING)
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+
+  @@unique([tableId, startTime, endTime])
+  @@index([userId])
+  @@index([tableId])
 } 

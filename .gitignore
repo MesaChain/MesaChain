@@ -52,4 +52,8 @@ yarn.lock
 # Package manager caches and logs
 .npm
 .yarn-cache
-.pnpm-store/ 
+.pnpm-store/
+
+# Added from the code block
+*.swp
+*.swo 
