@@ -35,6 +35,17 @@ enum ReservationStatus {
   COMPLETED
 }
 
+enum OrderStatus {
+  PENDING
+  COMPLETED
+  CANCELLED
+}
+
+enum MenuCategory {
+  FOOD
+  DRINKS
+}
+
 model User {
   id            String           @id @default(uuid())
   email         String           @unique
@@ -48,6 +59,8 @@ model User {
   session       Session[]
   refreshTokens RefreshToken[]
   reservations  Reservation[]
+  orders        Order[]
+  statusChanges OrderStatusHistory[]
 }
 
 model StellarWallet {
@@ -72,6 +85,7 @@ model Transaction {
   createdAt      DateTime      @default(now()) @map("created_at")
 
   wallet         StellarWallet @relation(fields: [walletId], references: [id], onDelete: Cascade)
+  order          Order?
 }
 
 model Table {
@@ -123,4 +137,81 @@ model Session {
   updatedAt DateTime @updatedAt
 
   @@index([userId])
+}
+
+model MenuItem {
+  id          String         @id @default(uuid())
+  name        String
+  description String?
+  price       Decimal        @db.Decimal(10, 2)
+  category    MenuCategory
+  imageUrl    String?        @map("image_url")
+  available   Boolean        @default(true)
+  createdAt   DateTime       @default(now()) @map("created_at")
+  updatedAt   DateTime       @updatedAt @map("updated_at")
+  
+  orderItems  OrderItem[]
+
+  @@map("menu_items")
+}
+
+model Order {
+  id              String              @id @default(uuid())
+  orderNumber     String              @unique @map("order_number")
+  staffId         String              @map("staff_id")
+  customerName    String?             @map("customer_name")
+  customerPhone   String?             @map("customer_phone")
+  customerEmail   String?             @map("customer_email")
+  notes           String?
+  subtotal        Decimal             @db.Decimal(10, 2)
+  tax             Decimal             @db.Decimal(10, 2)
+  total           Decimal             @db.Decimal(10, 2)
+  status          OrderStatus         @default(PENDING)
+  transactionId   String?             @unique @map("transaction_id")
+  createdAt       DateTime            @default(now()) @map("created_at")
+  updatedAt       DateTime            @updatedAt @map("updated_at")
+
+  staff           User                @relation(fields: [staffId], references: [id])
+  transaction     Transaction?        @relation(fields: [transactionId], references: [id])
+  items           OrderItem[]
+  statusHistory   OrderStatusHistory[]
+
+  @@index([staffId])
+  @@index([status])
+  @@index([createdAt])
+  @@map("orders")
+}
+
+model OrderItem {
+  id        String    @id @default(uuid())
+  orderId   String    @map("order_id")
+  menuItemId String   @map("menu_item_id")
+  quantity  Int
+  unitPrice Decimal   @db.Decimal(10, 2) @map("unit_price")
+  totalPrice Decimal  @db.Decimal(10, 2) @map("total_price")
+  notes     String?
+  createdAt DateTime  @default(now()) @map("created_at")
+
+  order     Order     @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  menuItem  MenuItem  @relation(fields: [menuItemId], references: [id])
+
+  @@index([orderId])
+  @@index([menuItemId])
+  @@map("order_items")
+}
+
+model OrderStatusHistory {
+  id        String      @id @default(uuid())
+  orderId   String      @map("order_id")
+  status    OrderStatus
+  notes     String?
+  changedBy String      @map("changed_by")
+  createdAt DateTime    @default(now()) @map("created_at")
+
+  order     Order       @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  user      User        @relation(fields: [changedBy], references: [id])
+
+  @@index([orderId])
+  @@index([createdAt])
+  @@map("order_status_history")
 }
