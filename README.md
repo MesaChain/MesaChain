@@ -237,3 +237,14 @@ Make sure you have the correct versions of Node.js and pnpm installed.
 
 Check the project documentation for any specific environment variables that need to be set.
 
+## 📊 Monitoring & Logging
+
+MesaChain uses Prometheus, Grafana, and the ELK stack for comprehensive monitoring and centralized logging. See `MONITORING.md` for full onboarding and playbook details.
+
+- Prometheus: http://localhost:9090
+- Grafana: http://localhost:3000 (admin/admin)
+- Kibana: http://localhost:5601
+- Alertmanager: http://localhost:9093
+
+To onboard a new service or respond to alerts, see the quick reference in `README_MONITORING_SNIPPET.md` and the full guide in `MONITORING.md`.
+

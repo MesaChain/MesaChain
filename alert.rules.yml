@@ -1,0 +1,30 @@
+groups:
+  - name: MesaChain Alerts
+    rules:
+      - alert: HighErrorRate
+        expr: |
+        (sum(rate(http_requests_total{status=~"5.."}[5m])) /
+         sum(rate(http_requests_total[5m]))) > 0.05
+        labels:
+          severity: critical
+        annotations:
+          summary: "High error rate detected on backend"
+          description: "More than 5% of requests are failing with 5xx errors."
+
+      - alert: HighCPUUsage
+       expr: rate(process_cpu_seconds_total[5m]) > 0.8
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High CPU usage detected"
+          description: "CPU usage is above 80% for 5 minutes."
+
+      - alert: ServiceDown
+        expr: up == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Service is down"
+          description: "A monitored service is not responding."

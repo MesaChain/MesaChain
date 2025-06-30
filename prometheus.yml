@@ -1,0 +1,16 @@
+# Prometheus configuration
+
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+  external_labels:
+    monitor: 'mesachain-monitor'
+
+rule_files:
+  - "alert.rules.yml"
+
+scrape_configs:
+  - job_name: 'backend'
+    static_configs:
+      - targets: ['backend:4000']
+  # Add more jobs for other services as needed
