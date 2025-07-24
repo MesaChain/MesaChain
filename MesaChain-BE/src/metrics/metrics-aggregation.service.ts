@@ -1,7 +1,7 @@
-import { Injectable, Logger } from '@nestjs/common';
-import { PrismaService } from '../prisma/prisma.service';
-import { AggregationPeriod } from './types/enums';
-import { Cron, CronExpression } from '@nestjs/schedule';
+import { Injectable, Logger } from "@nestjs/common";
+import { PrismaService } from "../prisma/prisma.service";
+import { AggregationPeriod } from "./types/enums";
+import { Cron, CronExpression } from "@nestjs/schedule";
 
 @Injectable()
 export class MetricsAggregationService {
@@ -11,32 +11,39 @@ export class MetricsAggregationService {
 
   async aggregateMetrics(period: AggregationPeriod) {
     this.logger.log(`Aggregating metrics for period: ${period}`);
-    
+
     try {
       const { startTime, endTime } = this.getPeriodRange(period);
-      
-      // Get all unique metric names for the period
-      const uniqueMetrics = await this.prisma.metric.findMany({
+
+      // Group by name and category—leverages the existing [name, timestamp] index
+      const uniqueMetrics = await this.prisma.metric.groupBy({
+        by: ["name", "category"],
         where: {
           timestamp: {
             gte: startTime,
             lt: endTime,
           },
         },
-        select: {
-          name: true,
-          category: true,
-        },
-        distinct: ['name'],
       });
 
-      for (const metricInfo of uniqueMetrics) {
-        await this.aggregateMetricByName(metricInfo.name, period, startTime, endTime);
+      // Batch processing to avoid timeouts
+      const batchSize = 100;
+      for (let i = 0; i < uniqueMetrics.length; i += batchSize) {
+        const batch = uniqueMetrics.slice(i, i + batchSize);
+        await Promise.all(
+          batch.map(({ name }) =>
+            this.aggregateMetricByName(name, period, startTime, endTime)
+          )
+        );
       }
 
-      this.logger.log(`Completed aggregation for ${uniqueMetrics.length} metrics in period ${period}`);
+      this.logger.log(
+        `Completed aggregation for ${uniqueMetrics.length} metrics in period ${period}`
+      );
     } catch (error) {
-      this.logger.error(`Failed to aggregate metrics for period ${period}: ${error.message}`);
+      this.logger.error(
+        `Failed to aggregate metrics for period ${period}: ${error.message}`
+      );
     }
   }
 
@@ -48,17 +55,21 @@ export class MetricsAggregationService {
   ) {
     try {
       // Check if aggregation already exists
-      const existingAggregation = await this.prisma.metricAggregation.findFirst({
-        where: {
-          metric: { name: metricName },
-          period,
-          startTime,
-          endTime,
-        },
-      });
+      const existingAggregation = await this.prisma.metricAggregation.findFirst(
+        {
+          where: {
+            metric: { name: metricName },
+            period,
+            startTime,
+            endTime,
+          },
+        }
+      );
 
       if (existingAggregation) {
-        this.logger.debug(`Aggregation already exists for ${metricName} in period ${period}`);
+        this.logger.debug(
+          `Aggregation already exists for ${metricName} in period ${period}`
+        );
         return;
       }
 
@@ -71,7 +82,7 @@ export class MetricsAggregationService {
             lt: endTime,
           },
         },
-        orderBy: { timestamp: 'asc' },
+        orderBy: { timestamp: "asc" },
       });
 
       if (metrics.length === 0) {
@@ -79,15 +90,16 @@ export class MetricsAggregationService {
       }
 
       // Calculate aggregations
-      const values = metrics.map(m => m.value);
+      const values = metrics.map((m) => m.value);
       const sum = values.reduce((a, b) => a + b, 0);
       const count = values.length;
       const avg = sum / count;
       const min = Math.min(...values);
       const max = Math.max(...values);
-      
+
       // Calculate standard deviation
-      const variance = values.reduce((acc, val) => acc + Math.pow(val - avg, 2), 0) / count;
+      const variance =
+        values.reduce((acc, val) => acc + Math.pow(val - avg, 2), 0) / count;
       const stdDev = Math.sqrt(variance);
 
       // Create aggregation record
@@ -107,32 +119,61 @@ export class MetricsAggregationService {
         },
       });
 
-      this.logger.debug(`Created aggregation for ${metricName}: count=${count}, avg=${avg.toFixed(2)}, min=${min}, max=${max}`);
+      this.logger.debug(
+        `Created aggregation for ${metricName}: count=${count}, avg=${avg.toFixed(2)}, min=${min}, max=${max}`
+      );
     } catch (error) {
-      this.logger.error(`Failed to aggregate metric ${metricName}: ${error.message}`);
+      this.logger.error(
+        `Failed to aggregate metric ${metricName}: ${error.message}`
+      );
     }
   }
 
-  private getPeriodRange(period: AggregationPeriod): { startTime: Date; endTime: Date } {
+  private getPeriodRange(period: AggregationPeriod): {
+    startTime: Date;
+    endTime: Date;
+  } {
     const now = new Date();
     let startTime: Date;
     let endTime: Date;
 
     switch (period) {
       case AggregationPeriod.HOURLY:
-        startTime = new Date(now.getFullYear(), now.getMonth(), now.getDate(), now.getHours() - 1);
-        endTime = new Date(now.getFullYear(), now.getMonth(), now.getDate(), now.getHours());
+        startTime = new Date(
+          now.getFullYear(),
+          now.getMonth(),
+          now.getDate(),
+          now.getHours() - 1
+        );
+        endTime = new Date(
+          now.getFullYear(),
+          now.getMonth(),
+          now.getDate(),
+          now.getHours()
+        );
         break;
 
       case AggregationPeriod.DAILY:
-        startTime = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1);
+        startTime = new Date(
+          now.getFullYear(),
+          now.getMonth(),
+          now.getDate() - 1
+        );
         endTime = new Date(now.getFullYear(), now.getMonth(), now.getDate());
         break;
 
       case AggregationPeriod.WEEKLY:
         const dayOfWeek = now.getDay();
-        startTime = new Date(now.getFullYear(), now.getMonth(), now.getDate() - dayOfWeek - 7);
-        endTime = new Date(now.getFullYear(), now.getMonth(), now.getDate() - dayOfWeek);
+        startTime = new Date(
+          now.getFullYear(),
+          now.getMonth(),
+          now.getDate() - dayOfWeek - 7
+        );
+        endTime = new Date(
+          now.getFullYear(),
+          now.getMonth(),
+          now.getDate() - dayOfWeek
+        );
         break;
 
       case AggregationPeriod.MONTHLY:
@@ -168,22 +209,22 @@ export class MetricsAggregationService {
     await this.aggregateMetrics(AggregationPeriod.DAILY);
   }
 
-  @Cron('0 0 * * 1') // Every Monday at midnight
+  @Cron("0 0 * * 1") // Every Monday at midnight
   async weeklyAggregation() {
     await this.aggregateMetrics(AggregationPeriod.WEEKLY);
   }
 
-  @Cron('0 0 1 * *') // First day of every month at midnight
+  @Cron("0 0 1 * *") // First day of every month at midnight
   async monthlyAggregation() {
     await this.aggregateMetrics(AggregationPeriod.MONTHLY);
   }
 
-  @Cron('0 0 1 1,4,7,10 *') // First day of quarters
+  @Cron("0 0 1 1,4,7,10 *") // First day of quarters
   async quarterlyAggregation() {
     await this.aggregateMetrics(AggregationPeriod.QUARTERLY);
   }
 
-  @Cron('0 0 1 1 *') // January 1st at midnight
+  @Cron("0 0 1 1 *") // January 1st at midnight
   async yearlyAggregation() {
     await this.aggregateMetrics(AggregationPeriod.YEARLY);
   }
@@ -197,7 +238,9 @@ export class MetricsAggregationService {
   ) {
     try {
       await this.aggregateMetricByName(metricName, period, startDate, endDate);
-      this.logger.log(`Manual aggregation completed for ${metricName} from ${startDate} to ${endDate}`);
+      this.logger.log(
+        `Manual aggregation completed for ${metricName} from ${startDate} to ${endDate}`
+      );
     } catch (error) {
       this.logger.error(`Manual aggregation failed: ${error.message}`);
       throw error;
@@ -205,7 +248,7 @@ export class MetricsAggregationService {
   }
 
   // Clean up old aggregations based on retention policy
-  @Cron('0 2 * * *') // Daily at 2 AM
+  @Cron("0 2 * * *") // Daily at 2 AM
   async cleanupOldAggregations() {
     try {
       const retentionPeriods = {
@@ -229,7 +272,9 @@ export class MetricsAggregationService {
         });
 
         if (deleted.count > 0) {
-          this.logger.log(`Cleaned up ${deleted.count} old ${period} aggregations`);
+          this.logger.log(
+            `Cleaned up ${deleted.count} old ${period} aggregations`
+          );
         }
       }
     } catch (error) {

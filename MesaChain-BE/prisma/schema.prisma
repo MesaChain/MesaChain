@@ -95,10 +95,17 @@ model User {
   reports       Report[]
 }
 
+enum ReportExecutionStatus {
+  RUNNING
+  COMPLETED
+  FAILED
+  CANCELLED
+}
+
 model StellarWallet {
   id          String   @id @default(uuid())
   publicKey   String   @unique
-  secretKey   String
+  secretKey   String   // ENCRYPTED: Must be encrypted before storage using EncryptionService
   network     Network
   balance     Decimal  @default(0)
   userId      String
@@ -222,19 +229,17 @@ model OrderStatusHistory {
 
 // New metrics models
 model Metric {
-  id          String         @id @default(uuid())
+  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   name        String
   value       Float
-  timestamp   DateTime       @default(now())
+  timestamp   DateTime @default(now())
   category    MetricCategory
   source      String
   metadata    Json?
-  tags        Json?
-  createdAt   DateTime       @default(now()) @map("created_at")
-  updatedAt   DateTime       @updatedAt @map("updated_at")
-  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
   aggregations MetricAggregation[]
-  
+
   @@index([category, timestamp])
   @@index([name, timestamp])
   @@index([source, timestamp])
@@ -242,30 +247,27 @@ model Metric {
 }
 
 model MetricAggregation {
-  id          String            @id @default(uuid())
-  metricId    String            @map("metric_id")
-  period      AggregationPeriod
-  startTime   DateTime          @map("start_time")
-  endTime     DateTime          @map("end_time")
+  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  metricId    String   @db.Uuid
+  metric      Metric   @relation(fields: [metricId], references: [id])
+  period      String
+  startTime   DateTime
+  endTime     DateTime
   value       Float
   count       Int
   min         Float
   max         Float
   avg         Float
-  sum         Float
-  stdDev      Float?            @map("std_dev")
-  createdAt   DateTime          @default(now()) @map("created_at")
-  updatedAt   DateTime          @updatedAt @map("updated_at")
-  
-  metric      Metric            @relation(fields: [metricId], references: [id], onDelete: Cascade)
-  
-  @@unique([metricId, period, startTime, endTime])
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([metricId, period, startTime])
   @@index([period, startTime, endTime])
   @@map("metric_aggregations")
 }
 
 model Report {
-  id          String       @id @default(uuid())
+  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   name        String
   description String?
   query       String
@@ -286,18 +288,18 @@ model Report {
 }
 
 model ReportExecution {
-  id          String       @id @default(uuid())
-  reportId    String       @map("report_id")
-  status      String
-  startTime   DateTime     @map("start_time")
-  endTime     DateTime?    @map("end_time")
-  filePath    String?      @map("file_path")
-  fileSize    Int?         @map("file_size")
-  errorMessage String?     @map("error_message")
+  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  reportId    String   @db.Uuid
+  status      ReportExecutionStatus @default(RUNNING)
+  startTime   DateTime              @map("start_time")
+  endTime     DateTime?             @map("end_time")
+  filePath    String?               @map("file_path")
+  fileSize    Int?                  @map("file_size")
+  errorMessage String?              @map("error_message")
   parameters  Json?
-  createdAt   DateTime     @default(now()) @map("created_at")
+  createdAt   DateTime              @default(now()) @map("created_at")
   
-  report      Report       @relation(fields: [reportId], references: [id], onDelete: Cascade)
+  report      Report                @relation(fields: [reportId], references: [id], onDelete: Cascade)
   
   @@index([reportId, status])
   @@index([startTime])

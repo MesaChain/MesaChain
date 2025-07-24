@@ -7,4 +7,4 @@ export const configSchema = z.object({
   API_BASE_URL_FRONTEND: z.string().url(),
 });
 
-export type ConfigSchema = z.infer<typeof configSchema>; 
+export type ConfigSchema = z.infer<typeof configSchema>;

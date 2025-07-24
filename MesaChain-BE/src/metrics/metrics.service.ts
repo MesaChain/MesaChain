@@ -1,10 +1,10 @@
-import { Injectable, Logger } from '@nestjs/common';
-import { PrismaService } from '../prisma/prisma.service';
-import { CreateMetricDto } from './dto/create-metric.dto';
-import { QueryMetricsDto } from './dto/query-metrics.dto';
-import { MetricCategory, AggregationPeriod } from './types/enums';
-import { Prisma } from '@prisma/client';
-import { Cron, CronExpression } from '@nestjs/schedule';
+import { Injectable, Logger } from "@nestjs/common";
+import { PrismaService } from "../prisma/prisma.service";
+import { CreateMetricDto } from "./dto/create-metric.dto";
+import { QueryMetricsDto } from "./dto/query-metrics.dto";
+import { MetricCategory, AggregationPeriod } from "./types/enums";
+import { Prisma } from "@prisma/client";
+import { Cron, CronExpression } from "@nestjs/schedule";
 
 @Injectable()
 export class MetricsService {
@@ -17,17 +17,24 @@ export class MetricsService {
       const metric = await this.prisma.metric.create({
         data: {
           ...createMetricDto,
-          timestamp: createMetricDto.timestamp ? new Date(createMetricDto.timestamp) : new Date(),
+          timestamp: createMetricDto.timestamp
+            ? new Date(createMetricDto.timestamp)
+            : new Date(),
         },
       });
 
-      if (this.isCriticalMetric(createMetricDto.category, createMetricDto.name)) {
+      if (
+        this.isCriticalMetric(createMetricDto.category, createMetricDto.name)
+      ) {
         await this.triggerRealTimeAggregation(metric.id);
       }
 
       return metric;
     } catch (error) {
-      this.logger.error(`Failed to create metric: ${error.message}`, error.stack);
+      this.logger.error(
+        `Failed to create metric: ${error.message}`,
+        error.stack
+      );
       throw error;
     }
   }
@@ -35,7 +42,7 @@ export class MetricsService {
   async createBulkMetrics(metrics: CreateMetricDto[]) {
     try {
       const result = await this.prisma.metric.createMany({
-        data: metrics.map(metric => ({
+        data: metrics.map((metric) => ({
           ...metric,
           timestamp: metric.timestamp ? new Date(metric.timestamp) : new Date(),
         })),
@@ -45,7 +52,10 @@ export class MetricsService {
       this.logger.log(`Created ${result.count} metrics in bulk`);
       return result;
     } catch (error) {
-      this.logger.error(`Failed to create bulk metrics: ${error.message}`, error.stack);
+      this.logger.error(
+        `Failed to create bulk metrics: ${error.message}`,
+        error.stack
+      );
       throw error;
     }
   }
@@ -58,7 +68,7 @@ export class MetricsService {
     }
 
     if (queryDto.name) {
-      where.name = { contains: queryDto.name, mode: 'insensitive' };
+      where.name = { contains: queryDto.name, mode: "insensitive" };
     }
 
     if (queryDto.source) {
@@ -76,25 +86,29 @@ export class MetricsService {
     }
 
     if (queryDto.tags && queryDto.tags.length > 0) {
-      where.tags = {
-        path: queryDto.tags,
-        not: null,
+      where.metadata = {
+        path: ["tags"],
+        array_contains: queryDto.tags, // For PostgreSQL JSON array containment
+        // OR use this for exact match:
+        // equals: queryDto.tags,
       };
     }
 
     const [metrics, total] = await Promise.all([
       this.prisma.metric.findMany({
         where,
-        orderBy: { timestamp: 'desc' },
+        orderBy: { timestamp: "desc" },
         take: queryDto.limit,
         skip: queryDto.offset,
-        include: queryDto.aggregation ? {
-          aggregations: {
-            where: { period: queryDto.aggregation },
-            orderBy: { startTime: 'desc' },
-            take: 1,
-          },
-        } : undefined,
+        include: queryDto.aggregation
+          ? {
+              aggregations: {
+                where: { period: queryDto.aggregation },
+                orderBy: { startTime: "desc" },
+                take: 1,
+              },
+            }
+          : undefined,
       }),
       this.prisma.metric.count({ where }),
     ]);
@@ -110,7 +124,7 @@ export class MetricsService {
   async getMetricsByCategory(category: MetricCategory, limit = 100) {
     return this.prisma.metric.findMany({
       where: { category },
-      orderBy: { timestamp: 'desc' },
+      orderBy: { timestamp: "desc" },
       take: limit,
     });
   }
@@ -125,16 +139,16 @@ export class MetricsService {
         period,
         startTime: { gte: startDate },
       },
-      orderBy: { startTime: 'asc' },
+      orderBy: { startTime: "asc" },
       include: { metric: true },
     });
   }
 
   private isCriticalMetric(category: MetricCategory, name: string): boolean {
     const criticalMetrics = {
-      [MetricCategory.SALES]: ['total_revenue', 'order_count'],
-      [MetricCategory.OPERATIONAL]: ['system_errors', 'response_time'],
-      [MetricCategory.FINANCIAL]: ['payment_failures', 'transaction_volume'],
+      [MetricCategory.SALES]: ["total_revenue", "order_count"],
+      [MetricCategory.OPERATIONAL]: ["system_errors", "response_time"],
+      [MetricCategory.FINANCIAL]: ["payment_failures", "transaction_volume"],
     };
 
     return criticalMetrics[category]?.includes(name) || false;
@@ -160,7 +174,10 @@ export class MetricsService {
 
       this.logger.log(`Cleaned up ${result.count} old metrics`);
     } catch (error) {
-      this.logger.error(`Failed to cleanup old metrics: ${error.message}`, error.stack);
+      this.logger.error(
+        `Failed to cleanup old metrics: ${error.message}`,
+        error.stack
+      );
     }
   }
 }

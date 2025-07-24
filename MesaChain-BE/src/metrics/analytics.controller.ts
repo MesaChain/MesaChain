@@ -1,28 +1,88 @@
-import { Controller, Get, UseGuards, Query } from '@nestjs/common';
-import { AnalyticsService, AnalyticsResult } from './analytics.service';
-import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
-import { AggregationPeriod } from './types/enums';
-import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
+import {
+  Controller,
+  Get,
+  Query,
+  UseGuards,
+  UseInterceptors,
+  ParseIntPipe,
+  BadRequestException,
+} from "@nestjs/common";
+import {
+  ApiTags,
+  ApiBearerAuth,
+  ApiOperation,
+  ApiQuery,
+} from "@nestjs/swagger";
+import { CacheInterceptor, CacheTTL } from "@nestjs/cache-manager";
+import { JwtAuthGuard } from "../auth/guards/jwt-auth.guard";
+import { AnalyticsService } from "./analytics.service";
+import { AggregationPeriod } from "./types/enums";
+import { AnalyticsResult } from "./types/interfaces";
 
-@Controller('analytics')
+@Controller("analytics")
 @UseGuards(JwtAuthGuard)
-@ApiTags('analytics')
+@UseInterceptors(CacheInterceptor)
+@ApiTags("analytics")
 @ApiBearerAuth()
 export class AnalyticsController {
   constructor(private readonly analyticsService: AnalyticsService) {}
 
   @Get()
-  @ApiOperation({ summary: 'Get analytics data' })
-  async getAnalytics(@Query('period') period?: AggregationPeriod): Promise<AnalyticsResult> {
+  @CacheTTL(300) // Cache for 5 minutes
+  @ApiOperation({ summary: "Get analytics data" })
+  @ApiQuery({
+    name: "period",
+    description: "Aggregation period for analytics data",
+    required: false,
+    enum: AggregationPeriod,
+  })
+  async getAnalytics(
+    @Query("period") period?: AggregationPeriod
+  ): Promise<AnalyticsResult> {
     return this.analyticsService.getAnalytics(period);
   }
 
-  @Get('predictive')
-  @ApiOperation({ summary: 'Get predictive analytics' })
+  @Get("predictive")
+  @CacheTTL(600) // Cache for 10 minutes
+  @ApiQuery({
+    name: "metric",
+    description: "Name of the metric to analyze",
+    required: true,
+  })
+  @ApiQuery({
+    name: "days",
+    description: "Number of days to predict (default: 30)",
+    required: false,
+  })
+  @ApiOperation({ summary: "Get predictive analytics" })
   async getPredictiveAnalytics(
-    @Query('metric') metricName: string,
-    @Query('days') days?: number,
+    @Query("metric") metricName: string,
+    @Query("days", new ParseIntPipe({ optional: true })) days?: number
   ) {
+    if (!metricName) {
+      throw new BadRequestException("Metric name is required");
+    }
     return this.analyticsService.getPredictiveAnalytics(metricName, days);
+  }
+
+  @Get("trends")
+  @CacheTTL(300) // Cache for 5 minutes
+  @ApiOperation({ summary: "Get trend analysis" })
+  @ApiQuery({
+    name: "category",
+    description: "Metric category to analyze trends for",
+    required: false,
+  })
+  @ApiQuery({
+    name: "period",
+    description: "Time period for trend analysis",
+    required: false,
+    enum: AggregationPeriod,
+  })
+  async getTrends(
+    @Query("category") category?: string,
+    @Query("period") period?: AggregationPeriod
+  ) {
+    return this.analyticsService.getTrends(category, period);
   }
 }
