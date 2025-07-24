@@ -2,46 +2,24 @@ import {
   Injectable,
   ConflictException,
   NotFoundException,
+  Inject,
+  forwardRef,
 } from "@nestjs/common";
 import { PrismaService } from "../prisma/prisma.service";
 import { CreateReservationDto } from "./dto/create-reservation.dto";
-import {
-  UpdateReservationDto,
-  updateReservationSchema,
-} from "./dto/update-reservation.dto";
-// Try importing ReservationStatus from generated Prisma client, fallback to string union if not available
-let ReservationStatus: any;
-type ReservationStatusType =
-  | "PENDING"
-  | "CONFIRMED"
-  | "IN_PREPARATION"
-  | "READY"
-  | "DELIVERED"
-  | "COMPLETED"
-  | "CANCELLED";
-try {
-  // eslint-disable-next-line @typescript-eslint/no-var-requires
-  ReservationStatus = require("@prisma/client").ReservationStatus;
-} catch {
-  ReservationStatus = {
-    PENDING: "PENDING",
-    CONFIRMED: "CONFIRMED",
-    IN_PREPARATION: "IN_PREPARATION",
-    READY: "READY",
-    DELIVERED: "DELIVERED",
-    COMPLETED: "COMPLETED",
-    CANCELLED: "CANCELLED",
-  };
-}
+import { UpdateReservationDto } from "./dto/update-reservation.dto";
 import { ReservationsGateway } from "./reservations.gateway";
+import { ReservationStatus } from "./types/reservation-status";
 
 @Injectable()
 export class ReservationsService {
   async findUserById(userId: string) {
     return this.prisma.user.findUnique({ where: { id: userId } });
   }
+  
   constructor(
     private prisma: PrismaService,
+    @Inject(forwardRef(() => ReservationsGateway))
     private gateway: ReservationsGateway
   ) {}
 
