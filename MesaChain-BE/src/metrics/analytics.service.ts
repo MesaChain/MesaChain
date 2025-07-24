@@ -1,26 +1,9 @@
 import { Injectable, Logger } from "@nestjs/common";
 import { PrismaService } from "../prisma/prisma.service";
 import { MetricCategory, AggregationPeriod } from "./types/enums";
+import { TrendAnalysis, AnalyticsResult } from "./types/interfaces";  // Import from interfaces
 import { MetricsCacheService } from "./cache/cache.service";
 
-export interface TrendAnalysis {
-  trend: "increasing" | "decreasing" | "stable";
-  changePercentage: number;
-  prediction: number;
-  confidence: number;
-}
-
-export interface AnalyticsResult {
-  summary: {
-    totalMetrics: number;
-    categoriesCount: Record<MetricCategory, number>;
-    averageValue: number;
-    topPerformers: any[];
-  };
-  trends: Record<string, TrendAnalysis>;
-  insights: string[];
-  recommendations: string[];
-}
 
 @Injectable()
 export class AnalyticsService {
@@ -331,7 +314,7 @@ export class AnalyticsService {
   }
 
   async getTrends(
-    category?: string,
+    category?: MetricCategory,  // Changed from string to MetricCategory
     period: AggregationPeriod = AggregationPeriod.DAILY
   ): Promise<Record<string, TrendAnalysis>> {
     const cacheKey = this.cacheService.generateCacheKey(

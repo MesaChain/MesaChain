@@ -1,6 +1,7 @@
 import { Injectable, Logger } from "@nestjs/common";
 import { PrismaService } from "../prisma/prisma.service";
 import { EncryptionService } from "../common/services/encryption.service";
+import { StrKey } from 'stellar-sdk';  // Add this import
 
 enum Network {
   PUBLIC = "PUBLIC",
@@ -23,6 +24,14 @@ export class StellarWalletService {
     network: Network
   ) {
     try {
+      // Add validation for Stellar key formats
+      if (!StrKey.isValidEd25519PublicKey(publicKey)) {
+        throw new Error('Invalid public key format');
+      }
+      if (!StrKey.isValidEd25519SecretSeed(secretKey)) {
+        throw new Error('Invalid secret key format');
+      }
+
       // Encrypt the secret key before storing
       const encryptedSecretKey =
         await this.encryptionService.encrypt(secretKey);
@@ -39,8 +48,8 @@ export class StellarWalletService {
       this.logger.log(`Created encrypted wallet for user: ${userId}`);
       return { ...wallet, secretKey: "[ENCRYPTED]" }; // Don't return actual secret
     } catch (error) {
-      this.logger.error(`Failed to create wallet: ${error.message}`);
-      throw new Error("Failed to create wallet");
+      this.logger.error('Failed to create wallet:', error);
+      throw new Error('Failed to create wallet');
     }
   }
 
@@ -57,8 +66,8 @@ export class StellarWalletService {
       // Decrypt the secret key when needed
       return this.encryptionService.decrypt(wallet.secretKey);
     } catch (error) {
-      this.logger.error(`Failed to decrypt secret key: ${error.message}`);
-      throw new Error("Failed to access wallet credentials");
+      this.logger.error('Failed to decrypt secret key:', error);
+      throw new Error('Failed to access wallet credentials');
     }
   }
 

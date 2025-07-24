@@ -7,6 +7,7 @@ import {
   HttpCode,
   HttpStatus,
   BadRequestException,
+  NotFoundException,  // Add this import
 } from "@nestjs/common";
 import {
   ApiTags,
@@ -49,6 +50,9 @@ export class ReportsController {
     try {
       return await this.reportsService.generateReport(id);
     } catch (error) {
+      if (error.message === 'Report not found') {
+        throw new NotFoundException('Report not found');
+      }
       throw new BadRequestException(
         "Failed to generate report: " + error.message
       );

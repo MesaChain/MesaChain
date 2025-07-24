@@ -250,7 +250,7 @@ model MetricAggregation {
   id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   metricId    String   @db.Uuid
   metric      Metric   @relation(fields: [metricId], references: [id])
-  period      String
+  period      AggregationPeriod  // Changed from String to enum
   startTime   DateTime
   endTime     DateTime
   value       Float
@@ -258,6 +258,8 @@ model MetricAggregation {
   min         Float
   max         Float
   avg         Float
+  sum         Float     // Added missing field
+  stdDev      Float     // Added missing field
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 

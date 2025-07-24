@@ -1,3 +1,5 @@
+import { MetricCategory } from './enums';
+
 export interface TrendAnalysis {
   trend: "increasing" | "decreasing" | "stable";
   changePercentage: number;
@@ -8,7 +10,7 @@ export interface TrendAnalysis {
 export interface AnalyticsResult {
   summary: {
     totalMetrics: number;
-    categoriesCount: Record<string, number>;
+    categoriesCount: Record<MetricCategory, number>;  // Use enum instead of string
     averageValue: number;
     topPerformers: any[];
   };

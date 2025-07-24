@@ -1,9 +1,11 @@
-import { Injectable, ExecutionContext } from "@nestjs/common";
+import { Injectable, ExecutionContext, Logger } from "@nestjs/common";
 import { ThrottlerGuard, ThrottlerModuleOptions } from "@nestjs/throttler";
 import { Reflector } from "@nestjs/core";
 
 @Injectable()
 export class MetricsRateLimitGuard extends ThrottlerGuard {
+  private readonly logger = new Logger(MetricsRateLimitGuard.name);
+
   constructor(
     options: ThrottlerModuleOptions,
     storageService: any,
@@ -47,8 +49,14 @@ export class MetricsRateLimitGuard extends ThrottlerGuard {
       // Log rate limit violations for monitoring
       const request = context.switchToHttp().getRequest();
       const tracker = await this.getTracker(request);
+      const path = request.url;
 
-      console.warn(`Rate limit exceeded for ${tracker} on metrics endpoint`);
+      this.logger.warn(`Rate limit exceeded for ${tracker} on ${path}`, {
+        tracker,
+        path,
+        method: request.method,
+        timestamp: new Date().toISOString(),
+      });
       throw error;
     }
   }

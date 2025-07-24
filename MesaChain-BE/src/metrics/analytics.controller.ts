@@ -16,7 +16,7 @@ import {
 import { CacheInterceptor, CacheTTL } from "@nestjs/cache-manager";
 import { JwtAuthGuard } from "../auth/guards/jwt-auth.guard";
 import { AnalyticsService } from "./analytics.service";
-import { AggregationPeriod } from "./types/enums";
+import { AggregationPeriod, MetricCategory } from "./types/enums"; // Added MetricCategory import
 import { AnalyticsResult } from "./types/interfaces";
 
 @Controller("analytics")
@@ -72,6 +72,7 @@ export class AnalyticsController {
     name: "category",
     description: "Metric category to analyze trends for",
     required: false,
+    enum: MetricCategory, // Added enum specification for Swagger
   })
   @ApiQuery({
     name: "period",
@@ -80,7 +81,7 @@ export class AnalyticsController {
     enum: AggregationPeriod,
   })
   async getTrends(
-    @Query("category") category?: string,
+    @Query("category") category?: MetricCategory, // Changed from string to MetricCategory
     @Query("period") period?: AggregationPeriod
   ) {
     return this.analyticsService.getTrends(category, period);
