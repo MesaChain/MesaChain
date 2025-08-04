@@ -5,10 +5,12 @@ import { PrismaModule } from "../prisma/prisma.module";
 import { ReservationsGateway } from "./reservations.gateway";
 import { JwtModule } from "@nestjs/jwt";
 import { ConfigModule, ConfigService } from "@nestjs/config";
+import { AuthModule } from "../auth/auth.module";
 
 @Module({
   imports: [
     PrismaModule,
+    AuthModule,
     JwtModule.registerAsync({
       imports: [ConfigModule],
       useFactory: async (configService: ConfigService) => ({

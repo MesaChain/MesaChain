@@ -22,5 +22,15 @@ export interface MenuItem {
     paymentMethod?: PaymentMethod;
   }
   
-  // utils/
+  // Table Layout Types
+  export * from './tableLayout';
   
+  // utils/
+  export type TokenTransaction = {
+    id: string
+    type: "Earn" | "Redeem" | "Transfer"
+    amount: number
+    date: string // ISO date string
+    description: string
+    relatedRewardId: string | null
+  }

@@ -8,6 +8,7 @@ import {
   FaChartBar,
   FaHistory,
   FaCog,
+  FaStar,
 } from "react-icons/fa";
 import SidebarItem from "./sidebar/SideBarItems";
 import UserProfile from "./sidebar/UserProfile";
@@ -27,6 +28,7 @@ const Sidebar: React.FC = () => {
     { icon: FaHistory, label: "Orders History", href: "/orders-history" },
     { icon: FaUsers, label: "Customers", href: "/customers" },
     { icon: FaCog, label: "Settings", href: "/settings" },
+    { icon: FaStar, label: "Loyalty", href: "/loyalty" },
   ];
 
   const ToggleCollapseButton = () => (

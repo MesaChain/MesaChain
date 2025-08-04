@@ -1,5 +1,5 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
-import { PrismaService } from '../prisma/prisma.service';
+import { PrismaService } from '../shared/prisma.service';
 import { MenuItem, MenuCategory } from '../interfaces/order.interface';
 import { Decimal } from '@prisma/client/runtime/library';
 import { CreateMenuItemDto } from './dto/create-menu-item.dto';

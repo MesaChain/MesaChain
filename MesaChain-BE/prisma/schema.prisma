@@ -1,3 +1,9 @@
+enum TokenTransactionType {
+  earn
+  spend
+  adjustment
+}
+
 // This is your Prisma schema file,
 // learn more about it in the docs: https://pris.ly/d/prisma-schema
 
@@ -75,6 +81,13 @@ enum AggregationPeriod {
   YEARLY
 }
 
+enum ReportExecutionStatus {
+  RUNNING
+  COMPLETED
+  FAILED
+  CANCELLED
+}
+
 // Original models
 model User {
   id            String           @id @default(uuid())
@@ -93,13 +106,63 @@ model User {
   statusChanges OrderStatusHistory[]
   changedStatuses ReservationStatusHistory[] @relation("ChangedByUser")
   reports       Report[]
+  loyaltyToken LoyaltyToken?
+  rewardRedemptions RewardRedemption[]
 }
 
-enum ReportExecutionStatus {
-  RUNNING
-  COMPLETED
-  FAILED
-  CANCELLED
+model LoyaltyToken {
+  id        String   @id @default(uuid())
+  userId    String   @unique
+  balance   Int      @default(0)
+  updatedAt DateTime @updatedAt
+  createdAt DateTime @default(now())
+
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  transactions TokenTransaction[]
+
+  @@index([userId])
+}
+
+model TokenTransaction {
+  id           String   @id @default(uuid())
+  loyaltyTokenId String
+  type         TokenTransactionType
+  amount       Int
+  description  String?
+  createdAt    DateTime @default(now())
+
+  loyaltyToken LoyaltyToken @relation(fields: [loyaltyTokenId], references: [id], onDelete: Cascade)
+
+  @@index([loyaltyTokenId])
+}
+
+model Reward {
+  id          String   @id @default(uuid())
+  name        String
+  description String?
+  cost        Int      // tokens required
+  inventory   Int?
+  active      Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  redemptions RewardRedemption[]
+}
+
+model RewardRedemption {
+  id         String   @id @default(uuid())
+  userId     String
+  rewardId   String
+  status     Status
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  reward     Reward   @relation(fields: [rewardId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([rewardId])
+  @@index([userId, rewardId])
 }
 
 model StellarWallet {
@@ -227,7 +290,7 @@ model OrderStatusHistory {
   user      User        @relation(fields: [changedBy], references: [id])
 }
 
-// New metrics models
+// Metrics system models
 model Metric {
   id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   name        String
@@ -250,7 +313,7 @@ model MetricAggregation {
   id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   metricId    String   @db.Uuid
   metric      Metric   @relation(fields: [metricId], references: [id])
-  period      AggregationPeriod  // Changed from String to enum
+  period      AggregationPeriod
   startTime   DateTime
   endTime     DateTime
   value       Float
@@ -258,8 +321,8 @@ model MetricAggregation {
   min         Float
   max         Float
   avg         Float
-  sum         Float     // Added missing field
-  stdDev      Float     // Added missing field
+  sum         Float
+  stdDev      Float
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 

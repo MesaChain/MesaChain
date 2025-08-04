@@ -1,6 +1,6 @@
 import { Test, TestingModule } from "@nestjs/testing";
 import { ReservationsService } from "./reservations.service";
-import { PrismaService } from "../prisma/prisma.service";
+import { PrismaService } from "../shared/prisma.service";
 import { ConflictException, NotFoundException } from "@nestjs/common";
 import { ReservationsGateway } from "./reservations.gateway";
 

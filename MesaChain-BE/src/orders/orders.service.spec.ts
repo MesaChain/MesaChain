@@ -1,7 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { BadRequestException, NotFoundException } from '@nestjs/common';
 import { OrdersService } from './orders.service';
-import { PrismaService } from '../prisma/prisma.service';
+import { PrismaService } from '../shared/prisma.service';
 import { OrderStatus } from '../interfaces/order.interface';
 import { UserRole } from '../interfaces/user.interface';
 

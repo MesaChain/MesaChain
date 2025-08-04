@@ -11,6 +11,10 @@ rule_files:
 
 scrape_configs:
   - job_name: 'backend'
+    metrics_path: /metrics
     static_configs:
       - targets: ['backend:4000']
-  # Add more jobs for other services as needed
+
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']

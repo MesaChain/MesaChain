@@ -1,4 +1,4 @@
-version: '3.8'
+version: "3.9"
 
 services:
   postgres:
@@ -11,7 +11,7 @@ services:
       POSTGRES_DB: ${POSTGRES_DB}
     volumes:
       - postgres_data:/var/lib/postgresql/data
-      - ./apps/backend/prisma/migrations:/docker-entrypoint-initdb.d
+      - ./MesaChain-BE/prisma/migrations:/docker-entrypoint-initdb.d
     networks:
       - mesachain-network
     healthcheck:
@@ -36,18 +36,14 @@ services:
 
   backend:
     build:
-      context: .
-      dockerfile: apps/backend/Dockerfile
+      context: ./MesaChain-BE
+      dockerfile: Dockerfile
     ports:
       - "4000:4000"
-    volumes:
-      - ./apps/backend:/app
-      - /app/node_modules
-      - ./apps/backend/prisma:/app/prisma
     env_file:
       - .env
     environment:
-      - NODE_ENV=development
+      - NODE_ENV=production
       - PORT=${PORT_BACKEND:-4000}
       - DATABASE_URL=postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
       - REDIS_URL=redis://redis:6379
@@ -70,13 +66,10 @@ services:
 
   frontend:
     build:
-      context: .
-      dockerfile: apps/frontend/Dockerfile
+      context: ./MesaChain-FE
+      dockerfile: Dockerfile
     ports:
       - "5000:5000"
-    volumes:
-      - ./apps/frontend:/app
-      - /app/node_modules
     env_file:
       - .env
     environment:
@@ -86,7 +79,8 @@ services:
       - VITE_API_BASE_URL_BACKEND=${API_BASE_URL_BACKEND}
       - VITE_API_BASE_URL_FRONTEND=${API_BASE_URL_FRONTEND}
     depends_on:
-      - backend
+      backend:
+        condition: service_healthy
     networks:
       - mesachain-network
 
@@ -97,26 +91,13 @@ services:
     environment:
       ADMINER_DEFAULT_SERVER: postgres
     depends_on:
-      - postgres
+      postgres:
+        condition: service_healthy
     networks:
       - mesachain-network
 
-  alertmanager:
-    image: prom/alertmanager:v0.27.0
-       restart: unless-stopped
-    secrets:
-      - alertmanager_slack_webhook     # keep creds out of VCS
-    ports:
-      - "9093:9093"
-    volumes:
-      - ./alertmanager.yml:/etc/alertmanager/alertmanager.yml
-    networks:
-      - mesachain-network
-    depends_on:
-      - prometheus
-
- prometheus:
-     image: prom/prometheus:v2.52.0
+  prometheus:
+    image: prom/prometheus:v2.52.0
     restart: unless-stopped
     ports:
       - "9090:9090"
@@ -131,14 +112,28 @@ services:
       timeout: 5s
       retries: 3
 
-   grafana:
-     image: grafana/grafana:10.4.2
-     restart: unless-stopped
+  alertmanager:
+    image: prom/alertmanager:v0.27.0
+    restart: unless-stopped
+    secrets:
+      - alertmanager_slack_webhook
+    ports:
+      - "9093:9093"
+    volumes:
+      - ./alertmanager.yml:/etc/alertmanager/alertmanager.yml
+    networks:
+      - mesachain-network
+    depends_on:
+      - prometheus
+
+  grafana:
+    image: grafana/grafana:10.4.2
+    restart: unless-stopped
     ports:
       - "3000:3000"
-     volumes:
+    volumes:
       - grafana_data:/var/lib/grafana
-     environment:
+    environment:
       - GF_SECURITY_ADMIN_USER=${GRAFANA_ADMIN_USER:-admin}
       - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_ADMIN_PASSWORD:?Set strong password}
     networks:
@@ -146,27 +141,52 @@ services:
     depends_on:
       - prometheus
 
-     elasticsearch:
+  elasticsearch:
     image: docker.elastic.co/elasticsearch/elasticsearch:8.13.4
-     ulimits:
-       memlock:
-         soft: -1
-         hard: -1
-     healthcheck:
+    restart: unless-stopped
+    environment:
+      - discovery.type=single-node
+      - xpack.security.enabled=false
+      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+    volumes:
+      - esdata:/usr/share/elasticsearch/data
+    ports:
+      - "9200:9200"
+    networks:
+      - mesachain-network
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9200/_cluster/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
 
   logstash:
     image: docker.elastic.co/logstash/logstash:8.13.4
     restart: unless-stopped
+    ports:
+      - "5044:5044"
+      - "9600:9600"
+    environment:
+      - "LS_JAVA_OPTS=-Xmx512m -Xms512m"
+    networks:
+      - mesachain-network
+    depends_on:
+      - elasticsearch
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:9600/_node/pipelines"]
-    interval: 30s
-    timeout: 10s
-    retries: 3
+      interval: 30s
+      timeout: 10s
+      retries: 3
 
   kibana:
     image: docker.elastic.co/kibana/kibana:8.13.4
+    restart: unless-stopped
     ports:
-      - '5601:5601'
+      - "5601:5601"
     environment:
       - ELASTICSEARCH_HOSTS=http://elasticsearch:9200
     depends_on:
@@ -174,10 +194,15 @@ services:
     networks:
       - mesachain-network
 
+secrets:
+  alertmanager_slack_webhook:
+    external: true
+
 volumes:
   postgres_data:
   redis_data:
   esdata:
+  grafana_data:
 
 networks:
   mesachain-network:
