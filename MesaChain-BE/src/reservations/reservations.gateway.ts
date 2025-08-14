@@ -5,6 +5,7 @@ import {
   MessageBody,
   ConnectedSocket,
 } from "@nestjs/websockets";
+import { Inject, forwardRef } from "@nestjs/common";
 import { Server, Socket } from "socket.io";
 import { ReservationsService } from "./reservations.service";
 import { UseGuards } from "@nestjs/common";
@@ -17,9 +18,10 @@ export class ReservationsGateway {
   server: Server;
 
   constructor(
+    @Inject(forwardRef(() => ReservationsService))
     private readonly reservationsService: ReservationsService,
     private readonly jwtService: JwtService
-  ) {}
+  ) { }
 
   // Called by service when status changes
   broadcastStatusUpdate(
@@ -52,7 +54,7 @@ export class ReservationsGateway {
       data.reservationId
     );
     if (!reservation) {
-    throw new WsException("Reservation not found");
+      throw new WsException("Reservation not found");
     }
     if (
       reservation.userId !== user.id &&

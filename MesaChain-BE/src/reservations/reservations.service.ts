@@ -2,11 +2,13 @@ import {
   Injectable,
   ConflictException,
   NotFoundException,
-  ForbiddenException,
- } from "@nestjs/common";
- import { PrismaService } from "../shared/prisma.service";
- import { CreateReservationDto } from "./dto/create-reservation.dto";
- import {
+  Inject,
+  forwardRef,
+    ForbiddenException,
+} from "@nestjs/common";
+import { PrismaService } from "../prisma/prisma.service";
+import { CreateReservationDto } from "./dto/create-reservation.dto";
+import {
   UpdateReservationDto,
   updateReservationSchema,
  } from "./dto/update-reservation.dto";
@@ -45,7 +47,13 @@ import {
   async findUserById(userId: string) {
     return this.prisma.user.findUnique({ where: { id: userId } });
   }
- 
+   
+  constructor(
+    private prisma: PrismaService,
+    @Inject(forwardRef(() => ReservationsGateway))
+    private gateway: ReservationsGateway
+  ) { }
+   
   async create(createReservationDto: CreateReservationDto) {
     const { userId, tableId, startTime, endTime, partySize } =
       createReservationDto;
@@ -240,13 +248,13 @@ import {
     orderId,
   }: {
     status?:
-      | "PENDING"
-      | "CONFIRMED"
-      | "IN_PREPARATION"
-      | "READY"
-      | "DELIVERED"
-      | "COMPLETED"
-      | "CANCELLED";
+    | "PENDING"
+    | "CONFIRMED"
+    | "IN_PREPARATION"
+    | "READY"
+    | "DELIVERED"
+    | "COMPLETED"
+    | "CANCELLED";
     customer?: string;
     orderId?: string;
   }) {
