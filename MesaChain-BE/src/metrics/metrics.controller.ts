@@ -1,90 +1,113 @@
-import { Controller, Get, Res } from '@nestjs/common';
-import { Response } from 'express';
-import * as client from 'prom-client';
+import {
+  Controller,
+  Get,
+  Post,
+  Query,
+  Param,
+  Body,
+  UseGuards,
+  UseInterceptors,
+  HttpCode,
+  HttpStatus,
+  ParseIntPipe,
+  BadRequestException,
+} from "@nestjs/common";
+import { CacheInterceptor, CacheTTL } from "@nestjs/cache-manager";
+import { MetricsService } from "./metrics.service";
+import { CreateMetricDto } from "./dto/create-metric.dto";
+import { QueryMetricsDto } from "./dto/query-metrics.dto";
+import { JwtAuthGuard } from "../auth/guards/jwt-auth.guard";
+import { MetricCategory, AggregationPeriod } from "./types/enums";
+import { ApiTags, ApiOperation, ApiBearerAuth } from "@nestjs/swagger";
 
-@Controller('metrics')
+@Controller("metrics")
+@UseGuards(JwtAuthGuard)
+@UseInterceptors(CacheInterceptor)
+@ApiTags("metrics")
+@ApiBearerAuth()
 export class MetricsController {
-  private readonly register: client.Registry;
+  constructor(private readonly metricsService: MetricsService) {}
 
-  constructor() {
-    // Create a Registry to register the metrics
-    this.register = new client.Registry();
-
-    // Add a default label which is added to all metrics
-    this.register.setDefaultLabels({
-      app: 'mesachain-backend'
-    });
-
-    // Enable the collection of default metrics
-    client.collectDefaultMetrics({ register: this.register });
-
-    // Create custom metrics
-    this.createCustomMetrics();
+  @Post()
+  @HttpCode(HttpStatus.CREATED)
+  @ApiOperation({ summary: "Create a new metric" })
+  async createMetric(@Body() createMetricDto: CreateMetricDto) {
+    return this.metricsService.createMetric(createMetricDto);
   }
 
-  private createCustomMetrics() {
-    // HTTP request duration histogram
-    const httpRequestDuration = new client.Histogram({
-      name: 'http_request_duration_seconds',
-      help: 'Duration of HTTP requests in seconds',
-      labelNames: ['method', 'route', 'status_code'],
-      buckets: [0.1, 0.3, 0.5, 0.7, 1, 3, 5, 7, 10]
-    });
-
-    // HTTP request counter
-    const httpRequestsTotal = new client.Counter({
-      name: 'http_requests_total',
-      help: 'Total number of HTTP requests',
-      labelNames: ['method', 'route', 'status_code']
-    });
-
-    // Database connection pool metrics
-    const dbConnectionsActive = new client.Gauge({
-      name: 'db_connections_active',
-      help: 'Number of active database connections'
-    });
-
-    // Business metrics
-    const ordersTotal = new client.Counter({
-      name: 'orders_total',
-      help: 'Total number of orders processed',
-      labelNames: ['status']
-    });
-
-    const reservationsTotal = new client.Counter({
-      name: 'reservations_total', 
-      help: 'Total number of reservations processed',
-      labelNames: ['status']
-    });
-
-    const usersRegistered = new client.Counter({
-      name: 'users_registered_total',
-      help: 'Total number of registered users',
-      labelNames: ['role']
-    });
-
-    // Register all metrics
-    this.register.registerMetric(httpRequestDuration);
-    this.register.registerMetric(httpRequestsTotal);
-    this.register.registerMetric(dbConnectionsActive);
-    this.register.registerMetric(ordersTotal);
-    this.register.registerMetric(reservationsTotal);
-    this.register.registerMetric(usersRegistered);
+  @Post("bulk")
+  @HttpCode(HttpStatus.CREATED)
+  @ApiOperation({ summary: "Create multiple metrics" })
+  async createBulkMetrics(@Body() metrics: CreateMetricDto[]) {
+    if (metrics.length > 1000) {
+      throw new BadRequestException("Maximum 1000 metrics allowed per request");
+    }
+    return this.metricsService.createBulkMetrics(metrics);
   }
 
   @Get()
-  async getMetrics(@Res() res: Response) {
-    try {
-      res.set('Content-Type', this.register.contentType);
-      const metrics = await this.register.metrics();
-      res.end(metrics);
-    } catch (error) {
-      res.status(500).end('Error collecting metrics');
-    }
+  @CacheTTL(300) // Cache for 5 minutes
+  @ApiOperation({ summary: "Query metrics with filters" })
+  async queryMetrics(@Query() queryDto: QueryMetricsDto) {
+    return this.metricsService.queryMetrics(queryDto);
   }
 
-  // Method to get the registry instance for use in other parts of the app
-  getRegistry(): client.Registry {
-    return this.register;
+  @Get("category/:category")
+  @CacheTTL(300)
+  @ApiOperation({ summary: "Get metrics by category" })
+  async getMetricsByCategory(
+    @Param("category") category: MetricCategory,
+    @Query("limit", new ParseIntPipe({ optional: true })) limit?: number
+  ) {
+    const maxLimit = 1000;
+    const validatedLimit = limit ? Math.min(limit, maxLimit) : 100;
+    return this.metricsService.getMetricsByCategory(category, validatedLimit);
+  }
+
+  @Get("trends/:name")
+  @CacheTTL(600) // Cache for 10 minutes
+  @ApiOperation({ summary: "Get metric trends" })
+  async getMetricTrends(
+    @Param("name") name: string,
+    @Query("period") period: AggregationPeriod,
+    @Query("days", new ParseIntPipe({ optional: true })) days?: number
+  ) {
+    if (days && (days < 1 || days > 365)) {
+      throw new BadRequestException("Days must be between 1 and 365");
+    }
+    return this.metricsService.getMetricTrends(name, period, days);
+  }
+
+  @Get("dashboard")
+  @CacheTTL(180) // Cache for 3 minutes
+  @ApiOperation({ summary: "Get dashboard metrics" })
+  async getDashboardMetrics() {
+    const [salesMetrics, operationalMetrics, customerMetrics] =
+      await Promise.all([
+        this.metricsService.getMetricsByCategory(MetricCategory.SALES, 10),
+        this.metricsService.getMetricsByCategory(
+          MetricCategory.OPERATIONAL,
+          10
+        ),
+        this.metricsService.getMetricsByCategory(MetricCategory.CUSTOMER, 10),
+      ]);
+
+    return {
+      sales: salesMetrics,
+      operational: operationalMetrics,
+      customer: customerMetrics,
+    };
+  }
+
+  @Get("realtime")
+  @ApiOperation({ summary: "Get real-time metrics" })
+  async getRealtimeMetrics() {
+    const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000);
+
+    return this.metricsService.queryMetrics({
+      startDate: fiveMinutesAgo.toISOString(),
+      limit: 100,
+      offset: 0,
+    });
   }
 }

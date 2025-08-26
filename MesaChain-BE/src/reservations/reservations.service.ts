@@ -4,18 +4,19 @@ import {
   NotFoundException,
   Inject,
   forwardRef,
-    ForbiddenException,
+  ForbiddenException,
 } from "@nestjs/common";
 import { PrismaService } from "../prisma/prisma.service";
 import { CreateReservationDto } from "./dto/create-reservation.dto";
 import {
   UpdateReservationDto,
   updateReservationSchema,
- } from "./dto/update-reservation.dto";
- 
- // Try importing ReservationStatus from generated Prisma client, fallback to string union if not available
- let ReservationStatus: any;
- type ReservationStatusType =
+} from "./dto/update-reservation.dto";
+import { ReservationsGateway } from "./reservations.gateway";
+
+// Try importing ReservationStatus from generated Prisma client, fallback to string union if not available
+let ReservationStatus: any;
+type ReservationStatusType =
   | "PENDING"
   | "CONFIRMED"
   | "IN_PREPARATION"
@@ -23,10 +24,11 @@ import {
   | "DELIVERED"
   | "COMPLETED"
   | "CANCELLED";
- try {
+
+try {
   // eslint-disable-next-line @typescript-eslint/no-var-requires
   ReservationStatus = require("@prisma/client").ReservationStatus;
- } catch {
+} catch {
   ReservationStatus = {
     PENDING: "PENDING",
     CONFIRMED: "CONFIRMED",
@@ -36,28 +38,24 @@ import {
     COMPLETED: "COMPLETED",
     CANCELLED: "CANCELLED",
   };
- }
- 
- @Injectable()
- export class ReservationsService {
-  constructor(
-    private prisma: PrismaService
-  ) {}
- 
-  async findUserById(userId: string) {
-    return this.prisma.user.findUnique({ where: { id: userId } });
-  }
-   
+}
+
+@Injectable()
+export class ReservationsService {
   constructor(
     private prisma: PrismaService,
     @Inject(forwardRef(() => ReservationsGateway))
     private gateway: ReservationsGateway
-  ) { }
-   
+  ) {}
+
+  async findUserById(userId: string) {
+    return this.prisma.user.findUnique({ where: { id: userId } });
+  }
+
   async create(createReservationDto: CreateReservationDto) {
     const { userId, tableId, startTime, endTime, partySize } =
       createReservationDto;
- 
+
     // Verificar disponibilidad
     const existingReservation = await this.prisma.reservation.findFirst({
       where: {
@@ -78,13 +76,13 @@ import {
         ],
       },
     });
- 
+
     if (existingReservation) {
       throw new ConflictException(
         "La mesa no está disponible en el horario seleccionado"
       );
     }
- 
+
     return this.prisma.reservation.create({
       data: {
         userId,
@@ -100,7 +98,7 @@ import {
       },
     });
   }
- 
+
   async findAll() {
     return this.prisma.reservation.findMany({
       include: {
@@ -109,7 +107,7 @@ import {
       },
     });
   }
- 
+
   async findOne(id: string) {
     const reservation = await this.prisma.reservation.findUnique({
       where: { id },
@@ -118,17 +116,17 @@ import {
         table: true,
       },
     });
- 
+
     if (!reservation) {
       throw new NotFoundException("Reserva no encontrada");
     }
- 
+
     return reservation;
   }
- 
+
   async update(id: string, updateReservationDto: UpdateReservationDto) {
     const reservation = await this.findOne(id);
- 
+
     return this.prisma.reservation.update({
       where: { id },
       data: updateReservationDto,
@@ -138,14 +136,14 @@ import {
       },
     });
   }
- 
+
   async remove(id: string) {
     await this.findOne(id);
     return this.prisma.reservation.delete({
       where: { id },
     });
   }
- 
+
   async getAvailability(startTime: Date, endTime: Date, partySize: number) {
     const tables = await this.prisma.table.findMany({
       where: {
@@ -174,20 +172,20 @@ import {
         },
       },
     });
- 
+
     return tables.map((table) => ({
       ...table,
       available: table.reservations.length === 0,
     }));
   }
- 
+
   async cancel(id: string) {
     const reservation = await this.findOne(id);
- 
+
     if (reservation.status === ReservationStatus.CANCELLED) {
       throw new ConflictException("La reserva ya está cancelada");
     }
- 
+
     return this.prisma.reservation.update({
       where: { id },
       data: {
@@ -199,7 +197,7 @@ import {
       },
     });
   }
- 
+
   async updateStatus(
     id: string,
     status:
@@ -214,14 +212,17 @@ import {
   ) {
     const reservation = await this.findOne(id);
     if (!reservation) throw new NotFoundException("Reserva no encontrada");
+    
     // Only update if status is different
     if (reservation.status === status) return reservation;
+    
     // Update reservation status
     const updated = await this.prisma.reservation.update({
       where: { id },
       data: { status },
       include: { user: true, table: true },
     });
+    
     // Log status change
     await this.prisma.reservationStatusHistory.create({
       data: {
@@ -230,10 +231,13 @@ import {
         changedById,
       },
     });
-    // TODO: Implement WebSocket broadcast without circular dependency
+    
+    // Emit real-time update
+    this.gateway.broadcastStatusUpdate(id, status);
+    
     return updated;
   }
- 
+
   async getStatusHistory(id: string) {
     return this.prisma.reservationStatusHistory.findMany({
       where: { reservationId: id },
@@ -241,20 +245,20 @@ import {
       include: { changedBy: true },
     });
   }
- 
+
   async filterAndSearch({
     status,
     customer,
     orderId,
   }: {
     status?:
-    | "PENDING"
-    | "CONFIRMED"
-    | "IN_PREPARATION"
-    | "READY"
-    | "DELIVERED"
-    | "COMPLETED"
-    | "CANCELLED";
+      | "PENDING"
+      | "CONFIRMED"
+      | "IN_PREPARATION"
+      | "READY"
+      | "DELIVERED"
+      | "COMPLETED"
+      | "CANCELLED";
     customer?: string;
     orderId?: string;
   }) {
@@ -269,4 +273,4 @@ import {
       include: { user: true, table: true },
     });
   }
- }
+}

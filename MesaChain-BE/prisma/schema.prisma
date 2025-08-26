@@ -3,6 +3,7 @@ enum TokenTransactionType {
   spend
   adjustment
 }
+
 // This is your Prisma schema file,
 // learn more about it in the docs: https://pris.ly/d/prisma-schema
 
@@ -53,6 +54,41 @@ enum MenuCategory {
   DRINKS
 }
 
+// New enums for metrics system
+enum MetricCategory {
+  SALES
+  CUSTOMER
+  STAFF
+  INVENTORY
+  FINANCIAL
+  OPERATIONAL
+}
+
+enum ReportFormat {
+  PDF
+  CSV
+  EXCEL
+  JSON
+  HTML
+}
+
+enum AggregationPeriod {
+  HOURLY
+  DAILY
+  WEEKLY
+  MONTHLY
+  QUARTERLY
+  YEARLY
+}
+
+enum ReportExecutionStatus {
+  RUNNING
+  COMPLETED
+  FAILED
+  CANCELLED
+}
+
+// Original models
 model User {
   id            String           @id @default(uuid())
   email         String           @unique
@@ -69,7 +105,7 @@ model User {
   orders        Order[]
   statusChanges OrderStatusHistory[]
   changedStatuses ReservationStatusHistory[] @relation("ChangedByUser")
-
+  reports       Report[]
   loyaltyToken LoyaltyToken?
   rewardRedemptions RewardRedemption[]
 }
@@ -130,171 +166,221 @@ model RewardRedemption {
 }
 
 model StellarWallet {
-  id          String         @id @default(uuid())
-  userId      String         @map("user_id")
-  publicKey   String         @unique @map("public_key")
+  id          String   @id @default(uuid())
+  publicKey   String   @unique
+  secretKey   String   // ENCRYPTED: Must be encrypted before storage using EncryptionService
   network     Network
-  createdAt   DateTime       @default(now()) @map("created_at")
-  user        User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  balance     Decimal  @default(0)
+  userId      String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  user        User     @relation(fields: [userId], references: [id])
   transactions Transaction[]
-
-  @@index([userId])
 }
 
 model Table {
-  id           String         @id @default(uuid())
-  name         String         @unique
+  id           String        @id @default(uuid())
+  name         String
   capacity     Int
   location     String
-  createdAt    DateTime       @default(now())
-  updatedAt    DateTime       @updatedAt
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
   reservations Reservation[]
 }
 
 model Transaction {
-  id             String        @id @default(uuid())
-  walletId       String        @map("wallet_id")
-  stellarTxHash  String        @unique @map("stellar_tx_hash")
-  amount         Decimal       @db.Decimal(20, 7)
-  assetCode      String        @map("asset_code")
-  status         Status
-  createdAt      DateTime      @default(now()) @map("created_at")
-
-  wallet         StellarWallet @relation(fields: [walletId], references: [id], onDelete: Cascade)
-  order          Order?
+  id            String        @id @default(uuid())
+  hash          String        @unique
+  amount        Decimal
+  fee           Decimal
+  status        Status
+  walletId      String
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+  wallet        StellarWallet @relation(fields: [walletId], references: [id])
 }
 
 model Reservation {
-  id         String             @id @default(uuid())
-  userId     String
-  tableId    String
-  startTime  DateTime
-  endTime    DateTime
-  partySize  Int
-  status     ReservationStatus @default(PENDING)
-  priority   Int               @default(0)
-  queuePosition Int?           // Optional, for queuing system
-  createdAt  DateTime          @default(now())
-  updatedAt  DateTime          @updatedAt
-
-  user       User              @relation(fields: [userId], references: [id])
-  table      Table             @relation(fields: [tableId], references: [id])
+  id          String                     @id @default(uuid())
+  userId      String
+  tableId     String
+  startTime   DateTime
+  endTime     DateTime
+  partySize   Int
+  status      ReservationStatus          @default(PENDING)
+  createdAt   DateTime                   @default(now())
+  updatedAt   DateTime                   @updatedAt
+  user        User                       @relation(fields: [userId], references: [id])
+  table       Table                      @relation(fields: [tableId], references: [id])
   statusHistory ReservationStatusHistory[]
-
-  @@unique([tableId, startTime, endTime])
-  @@index([userId])
-  @@index([tableId])
 }
 
 model ReservationStatusHistory {
-  id             String             @id @default(uuid())
-  reservationId  String
-  status         ReservationStatus
-  changedById    String?            // User who changed the status
-  changedAt      DateTime           @default(now())
-
-  reservation    Reservation        @relation(fields: [reservationId], references: [id])
-  changedBy      User?              @relation("ChangedByUser", fields: [changedById], references: [id])
-
-  @@index([reservationId])
-  @@index([changedById])
+  id            String            @id @default(uuid())
+  reservationId String
+  status        ReservationStatus
+  changedAt     DateTime          @default(now())
+  changedById   String
+  notes         String?
+  reservation   Reservation       @relation(fields: [reservationId], references: [id])
+  changedBy     User              @relation("ChangedByUser", fields: [changedById], references: [id])
 }
 
 model RefreshToken {
   id        String   @id @default(uuid())
-  userId    String
   token     String   @unique
+  userId    String
+  expiresAt DateTime
   createdAt DateTime @default(now())
-
   user      User     @relation(fields: [userId], references: [id])
 }
 
 model Session {
   id        String   @id @default(uuid())
-  token     String   @unique
   userId    String
-  user      User     @relation(fields: [userId], references: [id])
-  revoked   Boolean  @default(false)
+  token     String   @unique
   expiresAt DateTime
   createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  @@index([userId])
+  user      User     @relation(fields: [userId], references: [id])
 }
 
 model MenuItem {
-  id          String         @id @default(uuid())
+  id          String        @id @default(uuid())
   name        String
   description String?
-  price       Decimal        @db.Decimal(10, 2)
+  price       Decimal
   category    MenuCategory
-  imageUrl    String?        @map("image_url")
-  available   Boolean        @default(true)
-  createdAt   DateTime       @default(now()) @map("created_at")
-  updatedAt   DateTime       @updatedAt @map("updated_at")
-  
+  available   Boolean       @default(true)
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
   orderItems  OrderItem[]
-
-  @@map("menu_items")
 }
 
 model Order {
-  id              String              @id @default(uuid())
-  orderNumber     String              @unique @map("order_number")
-  staffId         String              @map("staff_id")
-  customerName    String?             @map("customer_name")
-  customerPhone   String?             @map("customer_phone")
-  customerEmail   String?             @map("customer_email")
-  notes           String?
-  subtotal        Decimal             @db.Decimal(10, 2)
-  tax             Decimal             @db.Decimal(10, 2)
-  total           Decimal             @db.Decimal(10, 2)
-  status          OrderStatus         @default(PENDING)
-  transactionId   String?             @unique @map("transaction_id")
-  createdAt       DateTime            @default(now()) @map("created_at")
-  updatedAt       DateTime            @updatedAt @map("updated_at")
-
-  staff           User                @relation(fields: [staffId], references: [id])
-  transaction     Transaction?        @relation(fields: [transactionId], references: [id])
-  items           OrderItem[]
-  statusHistory   OrderStatusHistory[]
-
-  @@index([staffId])
-  @@index([status])
-  @@index([createdAt])
-  @@map("orders")
+  id            String               @id @default(uuid())
+  userId        String
+  status        OrderStatus          @default(PENDING)
+  total         Decimal
+  createdAt     DateTime             @default(now())
+  updatedAt     DateTime             @updatedAt
+  user          User                 @relation(fields: [userId], references: [id])
+  items         OrderItem[]
+  statusHistory OrderStatusHistory[]
 }
 
 model OrderItem {
-  id        String    @id @default(uuid())
-  orderId   String    @map("order_id")
-  menuItemId String   @map("menu_item_id")
-  quantity  Int
-  unitPrice Decimal   @db.Decimal(10, 2) @map("unit_price")
-  totalPrice Decimal  @db.Decimal(10, 2) @map("total_price")
-  notes     String?
-  createdAt DateTime  @default(now()) @map("created_at")
-
-  order     Order     @relation(fields: [orderId], references: [id], onDelete: Cascade)
-  menuItem  MenuItem  @relation(fields: [menuItemId], references: [id])
-
-  @@index([orderId])
-  @@index([menuItemId])
-  @@map("order_items")
+  id         String   @id @default(uuid())
+  orderId    String
+  menuItemId String
+  quantity   Int
+  price      Decimal
+  createdAt  DateTime @default(now())
+  order      Order    @relation(fields: [orderId], references: [id])
+  menuItem   MenuItem @relation(fields: [menuItemId], references: [id])
 }
 
 model OrderStatusHistory {
   id        String      @id @default(uuid())
-  orderId   String      @map("order_id")
+  orderId   String
   status    OrderStatus
+  changedAt DateTime    @default(now())
+  changedBy String
   notes     String?
-  changedBy String      @map("changed_by")
-  createdAt DateTime    @default(now()) @map("created_at")
-
-  order     Order       @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  order     Order       @relation(fields: [orderId], references: [id])
   user      User        @relation(fields: [changedBy], references: [id])
+}
 
-  @@index([orderId])
-  @@index([createdAt])
-  @@map("order_status_history")
+// Metrics system models
+model Metric {
+  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name        String
+  value       Float
+  timestamp   DateTime @default(now())
+  category    MetricCategory
+  source      String
+  metadata    Json?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  aggregations MetricAggregation[]
+
+  @@index([category, timestamp])
+  @@index([name, timestamp])
+  @@index([source, timestamp])
+  @@map("metrics")
+}
+
+model MetricAggregation {
+  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  metricId    String   @db.Uuid
+  metric      Metric   @relation(fields: [metricId], references: [id])
+  period      AggregationPeriod
+  startTime   DateTime
+  endTime     DateTime
+  value       Float
+  count       Int
+  min         Float
+  max         Float
+  avg         Float
+  sum         Float
+  stdDev      Float
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([metricId, period, startTime])
+  @@index([period, startTime, endTime])
+  @@map("metric_aggregations")
+}
+
+model Report {
+  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name        String
+  description String?
+  query       String
+  parameters  Json?
+  schedule    String?
+  format      ReportFormat @default(JSON)
+  isActive    Boolean      @default(true) @map("is_active")
+  createdBy   String       @map("created_by")
+  createdAt   DateTime     @default(now()) @map("created_at")
+  updatedAt   DateTime     @updatedAt @map("updated_at")
+  
+  creator     User         @relation(fields: [createdBy], references: [id])
+  executions  ReportExecution[]
+  
+  @@index([createdBy])
+  @@index([isActive])
+  @@map("reports")
+}
+
+model ReportExecution {
+  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  reportId    String   @db.Uuid
+  status      ReportExecutionStatus @default(RUNNING)
+  startTime   DateTime              @map("start_time")
+  endTime     DateTime?             @map("end_time")
+  filePath    String?               @map("file_path")
+  fileSize    Int?                  @map("file_size")
+  errorMessage String?              @map("error_message")
+  parameters  Json?
+  createdAt   DateTime              @default(now()) @map("created_at")
+  
+  report      Report                @relation(fields: [reportId], references: [id], onDelete: Cascade)
+  
+  @@index([reportId, status])
+  @@index([startTime])
+  @@map("report_executions")
+}
+
+model MetricSnapshot {
+  id          String         @id @default(uuid())
+  category    MetricCategory
+  snapshot    Json
+  timestamp   DateTime       @default(now())
+  retentionDate DateTime     @map("retention_date")
+  compressed  Boolean        @default(false)
+  createdAt   DateTime       @default(now()) @map("created_at")
+  
+  @@index([category, timestamp])
+  @@index([retentionDate])
+  @@map("metric_snapshots")
 }
