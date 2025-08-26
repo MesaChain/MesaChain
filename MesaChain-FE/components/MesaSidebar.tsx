@@ -13,23 +13,33 @@ import {
 import SidebarItem from "./sidebar/SideBarItems";
 import UserProfile from "./sidebar/UserProfile";
 import { useSidebarStore } from "../store/useSidebarStore";
+import { useAuth } from "../lib/hooks/useAuth";
+import { UserRole, Permission } from "../types/auth";
 
 const Sidebar: React.FC = () => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const { isCollapsed, toggleCollapse } = useSidebarStore();
+  const { hasPermission, hasRole, user } = useAuth();
 
-  const sidebarItems = [
-    { icon: FaHome, label: "Dashboard", href: "./" },
-    { icon: FaShoppingCart, label: "Orders & Payments", href: "/demopage" },
-    { icon: FaBars, label: "Menu", href: "/menu" },
-    { icon: FaUsers, label: "Staff", href: "/staff" },
-    { icon: FaShoppingCart, label: "Transactions", href: "/transactions" },
-    { icon: FaChartBar, label: "Analytics", href: "/analytics" },
-    { icon: FaHistory, label: "Orders History", href: "/orders-history" },
-    { icon: FaUsers, label: "Customers", href: "/customers" },
-    { icon: FaCog, label: "Settings", href: "/settings" },
-    { icon: FaStar, label: "Loyalty", href: "/loyalty" },
+  // Define all possible sidebar items with their permission requirements
+  const allSidebarItems = [
+    { icon: FaHome, label: "Dashboard", href: "/", permission: null }, // Everyone can see dashboard
+    { icon: FaShoppingCart, label: "Orders & Payments", href: "/demopage", permission: Permission.POS },
+    { icon: FaBars, label: "Menu", href: "/menu", permission: Permission.MENU_MANAGEMENT },
+    { icon: FaUsers, label: "Staff", href: "/staff", permission: Permission.STAFF_MANAGEMENT },
+    { icon: FaShoppingCart, label: "Transactions", href: "/transactions", permission: Permission.PAYMENTS },
+    { icon: FaChartBar, label: "Analytics", href: "/analytics", permission: Permission.REPORTS },
+    { icon: FaHistory, label: "Orders History", href: "/orders-history", permission: Permission.ORDER_HISTORY },
+    { icon: FaUsers, label: "Customers", href: "/customers", permission: Permission.CUSTOMERS },
+    { icon: FaCog, label: "Settings", href: "/settings", permission: Permission.ADMIN },
+    { icon: FaStar, label: "Loyalty", href: "/loyalty", permission: null },
   ];
+
+  // Filter sidebar items based on user permissions
+  const sidebarItems = allSidebarItems.filter(item => {
+    if (!item.permission) return true; // No permission required
+    return hasPermission(item.permission);
+  });
 
   const ToggleCollapseButton = () => (
     <button
@@ -77,7 +87,7 @@ const Sidebar: React.FC = () => {
                 M
               </h1>
             </div>
-            <div 
+            <div
               onClick={toggleCollapse}
               className={`${!isCollapsed ? "ml-8 mt-2" : "mt-2 ml-0"}`}
             >
@@ -95,7 +105,7 @@ const Sidebar: React.FC = () => {
             ))}
           </nav>
 
-          <UserProfile name="Alexa Laza" isCollapsed={isCollapsed} />
+          <UserProfile name={user?.name || "User"} isCollapsed={isCollapsed} />
         </div>
       </div>
 

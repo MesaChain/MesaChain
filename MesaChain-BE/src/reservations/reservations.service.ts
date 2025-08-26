@@ -4,24 +4,53 @@ import {
   NotFoundException,
   Inject,
   forwardRef,
+  ForbiddenException,
 } from "@nestjs/common";
 import { PrismaService } from "../prisma/prisma.service";
 import { CreateReservationDto } from "./dto/create-reservation.dto";
-import { UpdateReservationDto } from "./dto/update-reservation.dto";
+import {
+  UpdateReservationDto,
+  updateReservationSchema,
+} from "./dto/update-reservation.dto";
 import { ReservationsGateway } from "./reservations.gateway";
-import { ReservationStatus } from "./types/reservation-status";
+
+// Try importing ReservationStatus from generated Prisma client, fallback to string union if not available
+let ReservationStatus: any;
+type ReservationStatusType =
+  | "PENDING"
+  | "CONFIRMED"
+  | "IN_PREPARATION"
+  | "READY"
+  | "DELIVERED"
+  | "COMPLETED"
+  | "CANCELLED";
+
+try {
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  ReservationStatus = require("@prisma/client").ReservationStatus;
+} catch {
+  ReservationStatus = {
+    PENDING: "PENDING",
+    CONFIRMED: "CONFIRMED",
+    IN_PREPARATION: "IN_PREPARATION",
+    READY: "READY",
+    DELIVERED: "DELIVERED",
+    COMPLETED: "COMPLETED",
+    CANCELLED: "CANCELLED",
+  };
+}
 
 @Injectable()
 export class ReservationsService {
-  async findUserById(userId: string) {
-    return this.prisma.user.findUnique({ where: { id: userId } });
-  }
-  
   constructor(
     private prisma: PrismaService,
     @Inject(forwardRef(() => ReservationsGateway))
     private gateway: ReservationsGateway
   ) {}
+
+  async findUserById(userId: string) {
+    return this.prisma.user.findUnique({ where: { id: userId } });
+  }
 
   async create(createReservationDto: CreateReservationDto) {
     const { userId, tableId, startTime, endTime, partySize } =
@@ -183,14 +212,17 @@ export class ReservationsService {
   ) {
     const reservation = await this.findOne(id);
     if (!reservation) throw new NotFoundException("Reserva no encontrada");
+    
     // Only update if status is different
     if (reservation.status === status) return reservation;
+    
     // Update reservation status
     const updated = await this.prisma.reservation.update({
       where: { id },
       data: { status },
       include: { user: true, table: true },
     });
+    
     // Log status change
     await this.prisma.reservationStatusHistory.create({
       data: {
@@ -199,8 +231,10 @@ export class ReservationsService {
         changedById,
       },
     });
+    
     // Emit real-time update
     this.gateway.broadcastStatusUpdate(id, status);
+    
     return updated;
   }
 

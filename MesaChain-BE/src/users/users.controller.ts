@@ -23,6 +23,9 @@ import {
 import { UsersService } from "./users.service";
 import { UpdateUserDto } from "./dto/update-user.dto";
 import { JwtAuthGuard } from "../auth/guards/jwt-auth.guard";
+import { RolesGuard } from "../auth/guards/roles.guard";
+import { Roles } from "../auth/decorators/roles.decorator";
+import { UserRole } from "../interfaces/user.interface";
 import { Request } from "express";
 import { User } from "../interfaces/user.interface";
 
@@ -39,21 +42,26 @@ export const GetUser = createParamDecorator(
 @ApiTags("users")
 @ApiBearerAuth()
 export class UsersController {
-  constructor(private readonly usersService: UsersService) {}
+  constructor(private readonly usersService: UsersService) { }
 
+  @UseGuards(RolesGuard)
+  @Roles(UserRole.ADMIN)
   @Get()
   @ApiOperation({ summary: "Get all users with pagination and filtering" })
   @ApiQuery({ name: "page", required: false, type: Number })
   @ApiQuery({ name: "limit", required: false, type: Number })
   @ApiQuery({ name: "filter", required: false, type: String })
   findAll(
+    @GetUser() user: User,
     @Query("page") page?: number,
     @Query("limit") limit?: number,
     @Query("filter") filter?: string
   ) {
-    return this.usersService.findAll({ page, limit, filter });
+    return this.usersService.findAll(user);
   }
 
+  @UseGuards(RolesGuard)
+  @Roles(UserRole.ADMIN)
   @Get("staff")
   @ApiOperation({ summary: "Get all staff users" })
   findStaff(@GetUser() user: User) {
@@ -79,6 +87,8 @@ export class UsersController {
     return this.usersService.update(id, updateUserDto, user);
   }
 
+  @UseGuards(RolesGuard)
+  @Roles(UserRole.ADMIN)
   @Delete(":id")
   @HttpCode(204)
   @ApiOperation({ summary: "Delete a user" })
