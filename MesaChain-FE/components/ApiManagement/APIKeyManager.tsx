@@ -133,7 +133,7 @@ export function APIKeyManager() {
                                             {permission}
                                         </Badge>
                                     ))}
-                                    <Badge variant={key.isActive ? "default" : "destructive"}>
+                                    <Badge variant={key.isActive ? "default" : "destructive"} className={`${key.isActive ? "bg-green-500" : "bg-red-400"}`}>
                                         {key.isActive ? "Active" : "Revoked"}
                                     </Badge>
                                 </div>
