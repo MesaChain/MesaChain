@@ -19,23 +19,23 @@ import {
 
 export default function APIManagement() {
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen">
       {/* Header */}
-      <div className="border-b bg-card">
+      {/* <div className="border-b bg-card"> */}
         <div className="container mx-auto px-6 py-6">
-          <div className="relative overflow-hidden rounded-xl bg-gradient-to-br from-blue-600 via-purple-600 to-pink-500 p-6 text-white">
+          <div className="relative overflow-hidden rounded-xl border  text-primary p-6">
             <div className="relative z-10">
               <h1 className="text-3xl font-bold mb-2">
                 API Management Dashboard
               </h1>
               <p className="text-lg opacity-90 mb-6">
-                Manage and monitor your third-party API integrations in one centralized hub
+                Manage and monitor your third-party API integrations in MesaChain
               </p>
               <div className="flex flex-wrap gap-3">
-                <button className="bg-white/20 backdrop-blur hover:bg-white/30 text-white px-4 py-2 rounded-lg transition-colors">
+                <button className="bg-green-500 backdrop-blur hover:bg-green-600 text-white px-4 py-2 rounded-lg transition-colors">
                   Quick Start Guide
                 </button>
-                <button className="bg-white/10 backdrop-blur hover:bg-white/20 text-white px-4 py-2 rounded-lg transition-colors">
+                <button className="bg-purple-500 backdrop-blur hover:bg-purple-600 text-white px-4 py-2 rounded-lg transition-colors">
                   View Documentation
                 </button>
               </div>
@@ -43,7 +43,7 @@ export default function APIManagement() {
             <div className="absolute inset-0 bg-gradient-to-r from-transparent to-white/10" />
           </div>
         </div>
-      </div>
+      {/* </div> */}
 
       {/* Key Metrics */}
       <div className="container mx-auto px-6 py-6">
