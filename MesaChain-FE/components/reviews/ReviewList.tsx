@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Review } from '@/types/reviews';
 import { ReviewCard } from './ReviewCard';
 import { Button } from '@/components/ui/button';
@@ -33,21 +33,28 @@ export function ReviewList({ itemId, itemType, className }: ReviewListProps) {
   const [refreshKey, setRefreshKey] = useState(0);
   const [filterVerified, setFilterVerified] = useState('all');
 
-  const fetchReviews = async (isLoadMore = false) => {
+  const fetchReviews = useCallback(async (isLoadMore = false, pageOverride?: number) => {
     try {
       setLoading(true);
       setError('');
 
-      const response = await reviewsApi.getReviews({
+      const payload = await reviewsApi.getReviews({
         itemId,
         itemType,
-        page: isLoadMore ? page : 1,
+        page: isLoadMore ? (pageOverride ?? page) : 1,
         limit: 10,
         sortBy,
         rating: filterRating !== 'all' ? Number(filterRating) : undefined,
+        verificationStatus: filterVerified !== 'all' ? filterVerified : undefined,
       });
 
-      const newReviews = response.data.reviews;
+      // If payload is an array, use it directly; otherwise, try payload.data or payload.reviews
+      let newReviews: Review[] = [];
+      if (Array.isArray(payload)) {
+        newReviews = payload;
+      } else if (Array.isArray(payload?.data)) {
+        newReviews = payload.data;
+      }
       setHasMore(newReviews.length === 10);
 
       if (isLoadMore) {
@@ -60,16 +67,17 @@ export function ReviewList({ itemId, itemType, className }: ReviewListProps) {
     } finally {
       setLoading(false);
     }
-  };
+  }, [itemId, itemType, page, sortBy, filterRating, filterVerified]);
 
   useEffect(() => {
     setPage(1);
     fetchReviews();
-  }, [itemId, itemType, sortBy, filterRating, refreshKey]);
+  }, [itemId, itemType, sortBy, filterRating, filterVerified, refreshKey, fetchReviews]);
 
   const handleLoadMore = () => {
-    setPage((prev) => prev + 1);
-    fetchReviews(true);
+    const next = page + 1;
+    setPage(next);
+    fetchReviews(true, next);
   };
 
   const handleHelpfulUpdate = () => {
@@ -155,7 +163,7 @@ export function ReviewList({ itemId, itemType, className }: ReviewListProps) {
               <SelectItem value="all">All</SelectItem>
               <SelectItem value="VERIFIED">Verified</SelectItem>
               <SelectItem value="PENDING">Pending</SelectItem>
-              <SelectItem value="REJECTED">Rejected</SelectItem>
+              <SelectItem value="UNVERIFIED">Rejected</SelectItem>
             </SelectContent>
           </Select>
         </div>

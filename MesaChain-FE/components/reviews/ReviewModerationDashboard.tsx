@@ -258,10 +258,20 @@ export function ReviewModerationDashboard({
                       <td>{review.authorName}</td>
                       <td className="max-w-md truncate">{review.content}</td>
                       <td>
-                        <Badge variant="destructive">
-                          {/* Assuming there's a reportCount field */}
-                          3 Reports
-                        </Badge>
+                        {(() => {
+                          // Safely check for reportCount or reports if present, else fallback to 0
+                          let count = 0;
+                          if ('reportCount' in review && typeof (review as unknown & { reportCount?: unknown }).reportCount === 'number') {
+                            count = (review as unknown & { reportCount?: number }).reportCount ?? 0;
+                          } else if ('reports' in review && Array.isArray((review as unknown & { reports?: unknown }).reports)) {
+                            count = ((review as unknown & { reports?: unknown[] }).reports ?? []).length;
+                          }
+                          return count > 0 ? (
+                            <Badge variant="destructive">
+                              {`${count} Report${count === 1 ? '' : 's'}`}
+                            </Badge>
+                          ) : null;
+                        })()}
                       </td>
                       <td>
                         <Button variant="outline" size="sm" onClick={() => handleModerateReview(review.id, 'APPROVE')}>

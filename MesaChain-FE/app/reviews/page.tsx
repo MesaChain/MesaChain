@@ -1,4 +1,7 @@
+"use client";
+
 import { useState } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { AdvancedReviewForm } from '@/components/reviews/AdvancedReviewForm';
 import { ReviewList } from '@/components/reviews/ReviewList';
@@ -8,16 +11,17 @@ import { reviewsApi } from '@/lib/api/reviews';
 import { toast } from '@/components/ui/use-toast';
 
 interface ReviewPageProps {
-  itemId: string;
-  itemType: 'DISH' | 'SERVICE' | 'RESTAURANT';
+  itemId?: string;
+  itemType?: 'DISH' | 'SERVICE' | 'RESTAURANT';
   className?: string;
 }
 
-export default function ReviewPage({
-  itemId,
-  itemType,
-  className,
-}: ReviewPageProps) {
+export default function ReviewPage(props: ReviewPageProps) {
+  const searchParams = useSearchParams();
+  const itemId = props?.itemId ?? searchParams.get('itemId') ?? '';
+  const itemTypeParam = (props?.itemType ?? (searchParams.get('itemType') as ReviewPageProps['itemType'] | null));
+  const itemType = itemTypeParam ?? 'DISH';
+  const className = props?.className;
   const [activeTab, setActiveTab] = useState('read');
 
   const handleReviewSubmit = async (review: ReviewSubmission) => {
@@ -32,7 +36,7 @@ export default function ReviewPage({
         title: 'Failed to submit review',
         variant: 'destructive',
       });
-      throw error; // Re-throw to be handled by the form
+      // Do not rethrow; parent handles error
     }
   };
 

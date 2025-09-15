@@ -1,4 +1,4 @@
-import React, { useCallback } from 'react';
+import React, { useCallback, useEffect } from 'react';
 import { useDropzone } from 'react-dropzone';
 import Image from 'next/image';
 import { X } from 'lucide-react';
@@ -15,12 +15,21 @@ interface ReviewImageUploadProps {
 export function ReviewImageUpload({ value = [], onChange, className, disabled }: ReviewImageUploadProps) {
   const onDrop = useCallback((acceptedFiles: File[]) => {
     if (disabled) return;
-    
-    // Handle file uploads here - in a real app you'd upload to a server
     // For now, we'll just create object URLs
     const newImages = acceptedFiles.map(file => URL.createObjectURL(file));
     onChange([...value, ...newImages].slice(0, 5));
   }, [value, onChange, disabled]);
+
+  // Cleanup blob URLs on unmount or when value changes
+  useEffect(() => {
+    return () => {
+      value.forEach(url => {
+        if (url.startsWith('blob:')) {
+          URL.revokeObjectURL(url);
+        }
+      });
+    };
+  }, [value]);
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop,
@@ -33,6 +42,10 @@ export function ReviewImageUpload({ value = [], onChange, className, disabled }:
 
   const removeImage = (index: number) => {
     if (disabled) return;
+    const url = value[index];
+    if (url && url.startsWith('blob:')) {
+      URL.revokeObjectURL(url);
+    }
     const newImages = [...value];
     newImages.splice(index, 1);
     onChange(newImages);
@@ -44,12 +57,25 @@ export function ReviewImageUpload({ value = [], onChange, className, disabled }:
         <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
           {value.map((image, index) => (
             <div key={image} className="relative aspect-square">
-              <Image
-                src={image}
-                alt={`Review image ${index + 1}`}
-                className="rounded-lg object-cover"
-                fill
-              />
+              {image.startsWith('blob:') ? (
+                  <Image
+                    src={image}
+                    alt={`Review image ${index + 1}`}
+                    className="rounded-lg object-cover w-full h-full absolute inset-0"
+                    unoptimized
+                    width={100}
+                    height={100}
+                    onLoadingComplete={() => URL.revokeObjectURL(image)}
+                  />
+              ) : (
+                <Image
+                  src={image}
+                  alt={`Review image ${index + 1}`}
+                  className="rounded-lg object-cover"
+                  fill
+                  unoptimized
+                />
+              )}
               <Button
                 type="button"
                 variant="destructive"

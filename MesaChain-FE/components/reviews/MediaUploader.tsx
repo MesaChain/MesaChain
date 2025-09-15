@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import Image from 'next/image';
 import { X, Upload, AlertCircle } from 'lucide-react';
 import { useDropzone } from 'react-dropzone';
@@ -22,16 +22,20 @@ export function MediaUploader({
 }: MediaUploaderProps) {
   const [error, setError] = useState<string>('');
 
-  const onDrop = (acceptedFiles: File[], rejectedFiles: any[]) => {
+  const onDrop = (acceptedFiles: File[], rejectedFiles: unknown[]) => {
     setError('');
 
     if (rejectedFiles.length > 0) {
-      const errors = rejectedFiles[0].errors;
-      if (errors[0]?.code === 'file-too-large') {
+      let errors: unknown = undefined;
+      if (rejectedFiles.length > 0 && typeof rejectedFiles[0] === 'object' && rejectedFiles[0] !== null && 'errors' in rejectedFiles[0]) {
+        errors = (rejectedFiles[0] as { errors?: unknown }).errors;
+      }
+      const errorList = Array.isArray(errors) ? errors : [];
+      if (errorList[0]?.code === 'file-too-large') {
         setError(`File is too large. Maximum size is ${maxSize / 1024 / 1024}MB`);
-      } else if (errors[0]?.code === 'file-invalid-type') {
+      } else if (errorList[0]?.code === 'file-invalid-type') {
         setError('Only image files are allowed (JPEG, PNG, GIF)');
-      } else {
+      } else if (errorList.length > 0) {
         setError('Invalid file');
       }
       return;
@@ -41,7 +45,16 @@ export function MediaUploader({
     onFilesChange(newFiles);
   };
 
+  const previews = useMemo(() => files.map(file => URL.createObjectURL(file)), [files]);
+
+  useEffect(() => {
+    return () => {
+      previews.forEach(url => URL.revokeObjectURL(url));
+    };
+  }, [previews]);
+
   const removeFile = (index: number) => {
+    URL.revokeObjectURL(previews[index]);
     const newFiles = files.filter((_, i) => i !== index);
     onFilesChange(newFiles);
   };
@@ -96,13 +109,14 @@ export function MediaUploader({
 
       {files.length > 0 && (
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
-          {files.map((file, index) => (
+          {files.map((_, index) => (
             <div
               key={index}
               className="relative aspect-square rounded-lg overflow-hidden group"
             >
               <Image
-                src={URL.createObjectURL(file)}
+                unoptimized
+                src={previews[index]}
                 alt={`Preview ${index + 1}`}
                 fill
                 className="object-cover"

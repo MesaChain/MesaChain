@@ -1,3 +1,4 @@
+// ...existing code...
 import { useState, useEffect } from 'react';
 import { Socket, io } from 'socket.io-client';
 import { toast } from '../../components/ui/use-toast';
@@ -9,15 +10,28 @@ type NotificationEvent =
   | 'feedback-submitted'
   | 'feedback-responded';
 
-type NotificationHandler = (data: any) => void;
+type NotificationHandler = (data: unknown) => void;
 
 class ReviewNotificationService {
+  public isConnected(): boolean {
+    return !!this.socket?.connected;
+  }
+
+  public subscribeConnection(callback: (connected: boolean) => void) {
+    if (!this.socket) return;
+    this.socket.on('connect', () => callback(true));
+    this.socket.on('disconnect', () => callback(false));
+  }
+
+  public unsubscribeConnection(callback: (connected: boolean) => void) {
+    if (!this.socket) return;
+    this.socket.off('connect', () => callback(true));
+    this.socket.off('disconnect', () => callback(false));
+  }
   private static instance: ReviewNotificationService;
   private socket: Socket | null = null;
   private handlers: Map<NotificationEvent, Set<NotificationHandler>> = new Map();
-  private reconnectAttempts = 0;
-  private maxReconnectAttempts = 5;
-  private reconnectDelay = 1000; // Start with 1 second delay
+  // Removed manual reconnect logic; use socket.io built-in reconnection
 
   private constructor() {
     // Private constructor for singleton pattern
@@ -37,6 +51,10 @@ class ReviewNotificationService {
     this.socket = io(`${baseUrl}/reviews`, {
       auth: { userId },
       transports: ['websocket'],
+      reconnection: true,
+      reconnectionAttempts: 10,
+      reconnectionDelay: 1000,
+      reconnectionDelayMax: 5000,
     });
 
     this.setupSocketListeners();
@@ -47,12 +65,11 @@ class ReviewNotificationService {
 
     this.socket.on('connect', () => {
       console.log('Connected to review notification service');
-      this.reconnectAttempts = 0;
     });
 
     this.socket.on('disconnect', () => {
       console.log('Disconnected from review notification service');
-      this.attemptReconnect();
+      // No manual reconnect; socket.io will handle it
     });
 
     this.socket.on('error', (error) => {
@@ -81,21 +98,7 @@ class ReviewNotificationService {
     });
   }
 
-  private attemptReconnect() {
-    if (this.reconnectAttempts >= this.maxReconnectAttempts) {
-      toast({
-        title: 'Connection Error',
-        description: 'Failed to reconnect to notification service',
-        variant: 'destructive',
-      });
-      return;
-    }
-
-    setTimeout(() => {
-      this.reconnectAttempts++;
-      this.socket?.connect();
-    }, this.reconnectDelay * Math.pow(2, this.reconnectAttempts));
-  }
+  // Removed manual attemptReconnect logic
 
   subscribe(event: NotificationEvent, handler: NotificationHandler) {
     if (!this.handlers.has(event)) {
@@ -108,7 +111,7 @@ class ReviewNotificationService {
     this.handlers.get(event)?.delete(handler);
   }
 
-  private notifyHandlers(event: NotificationEvent, data: any) {
+  private notifyHandlers(event: NotificationEvent, data: unknown) {
     this.handlers.get(event)?.forEach((handler) => {
       try {
         handler(data);
@@ -118,11 +121,11 @@ class ReviewNotificationService {
     });
   }
 
-  private showToast(event: NotificationEvent, data: any) {
+  private showToast(event: NotificationEvent, data: unknown) {
     const notifications = {
       'review-submitted': {
         title: 'New Review',
-        description: `A new review has been submitted for ${data.itemType.toLowerCase()}`,
+  description: `A new review has been submitted for ${typeof data === 'object' && data && 'itemType' in data && typeof (data as any).itemType === 'string' ? (data as any).itemType.toLowerCase() : ''}`,
       },
       'review-approved': {
         title: 'Review Approved',
@@ -134,7 +137,7 @@ class ReviewNotificationService {
       },
       'feedback-submitted': {
         title: 'New Feedback',
-        description: `New feedback received in ${data.category.toLowerCase()} category`,
+  description: `New feedback received in ${typeof data === 'object' && data && 'category' in data && typeof (data as any).category === 'string' ? (data as any).category.toLowerCase() : ''} category`,
       },
       'feedback-responded': {
         title: 'Feedback Response',
@@ -167,20 +170,15 @@ export function useReviewNotifications(userId: string) {
     const service = ReviewNotificationService.getInstance();
     service.connect(userId);
 
-    const checkConnection = () => {
-      setIsConnected(service['socket']?.connected ?? false);
+    setIsConnected(service.isConnected());
+
+    const connectionCallback = (connected: boolean) => {
+      setIsConnected(connected);
     };
-
-    // Check initial connection
-    checkConnection();
-
-    // Subscribe to connection status changes
-    service['socket']?.on('connect', checkConnection);
-    service['socket']?.on('disconnect', checkConnection);
+    service.subscribeConnection(connectionCallback);
 
     return () => {
-      service['socket']?.off('connect', checkConnection);
-      service['socket']?.off('disconnect', checkConnection);
+      service.unsubscribeConnection(connectionCallback);
     };
   }, [userId]);
 

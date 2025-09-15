@@ -1,4 +1,6 @@
-import { useState, useEffect } from 'react';
+import Image from 'next/image';
+"use client";
+import { useState, useEffect, useCallback } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -58,12 +60,12 @@ export function AdvancedReviewForm({
   }, [draftKey, form]);
 
   // Save draft when form changes
-  const saveDraft = (data: Partial<ReviewFormData>) => {
+  const saveDraft = useCallback((data: Partial<ReviewFormData>) => {
     localStorage.setItem(draftKey, JSON.stringify({
       rating: data.rating,
       content: data.content,
     }));
-  };
+  }, [draftKey]);
 
   useEffect(() => {
     const subscription = form.watch((data) => {
@@ -77,7 +79,7 @@ export function AdvancedReviewForm({
       });
     });
     return () => subscription.unsubscribe();
-  }, [form]);
+  }, [form, saveDraft]);
 
   const clearDraft = () => {
     localStorage.removeItem(draftKey);
@@ -93,8 +95,8 @@ export function AdvancedReviewForm({
       clearDraft();
       form.reset();
     } catch (error) {
-      // Error will be handled by the parent component
-      throw error;
+      // Parent handles the error (toast). Avoid rethrow to prevent unhandled rejections.
+      return;
     }
   };
 
@@ -114,18 +116,25 @@ export function AdvancedReviewForm({
           <p className="whitespace-pre-wrap">{form.getValues('content')}</p>
           {(form.getValues('mediaFiles') ?? []).length > 0 && (
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
-              {(form.getValues('mediaFiles') ?? []).map((file, index) => (
-                <div
-                  key={index}
-                  className="relative aspect-square rounded-lg overflow-hidden"
-                >
-                  <img
-                    src={URL.createObjectURL(file)}
-                    alt={`Preview ${index + 1}`}
-                    className="object-cover w-full h-full"
-                  />
-                </div>
-              ))}
+              {(form.getValues('mediaFiles') ?? []).map((file, index) => {
+                const url = URL.createObjectURL(file);
+                return (
+                  <div
+                    key={index}
+                    className="relative aspect-square rounded-lg overflow-hidden"
+                  >
+                    <Image
+                      src={url}
+                      alt={`Preview ${index + 1}`}
+                      className="object-cover w-full h-full"
+                      unoptimized
+                      width={100}
+                      height={100}
+                      onLoadingComplete={() => URL.revokeObjectURL(url)}
+                    />
+                  </div>
+                );
+              })}
             </div>
           )}
         </div>
@@ -151,6 +160,7 @@ export function AdvancedReviewForm({
             <Textarea
               placeholder="Share your experience..."
               className="min-h-[120px] resize-none"
+              maxLength={1000}
               {...form.register('content')}
             />
             <div className="flex justify-end">
