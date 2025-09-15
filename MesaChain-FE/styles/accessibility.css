@@ -1,0 +1,156 @@
+/* Accessibility Enhancements */
+
+/* Focus Styles */
+:focus-visible {
+  outline: 2px solid hsl(var(--primary));
+  outline-offset: 2px;
+  border-radius: 0.25rem;
+}
+
+/* Skip Link */
+.skip-link {
+  @apply sr-only focus:not-sr-only;
+  @apply fixed left-4 top-4 z-50;
+  @apply bg-primary text-primary-foreground;
+  @apply px-4 py-2 rounded-md;
+  @apply transition-transform;
+}
+
+/* Screen Reader Only */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* Reduced Motion */
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* High Contrast Mode */
+@media (forced-colors: active) {
+  .button {
+    border: 2px solid currentColor;
+  }
+
+  .card {
+    border: 1px solid currentColor;
+  }
+}
+
+/* Focus Within Styles */
+.interactive-card:focus-within {
+  @apply ring-2 ring-primary ring-offset-2;
+}
+
+/* Loading States */
+.loading {
+  @apply relative pointer-events-none select-none;
+}
+
+.loading::after {
+  content: "";
+  @apply absolute inset-0;
+  @apply bg-white/50 dark:bg-black/50;
+}
+
+/* Animation States */
+.animate-fade-in {
+  animation: fadeIn 0.3s ease-in-out;
+}
+
+.animate-slide-up {
+  animation: slideUp 0.3s ease-out;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes slideUp {
+  from {
+    transform: translateY(10px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+/* Toast and Notification Styles */
+.notification {
+  @apply fixed bottom-4 right-4 z-50;
+  @apply max-w-md p-4 rounded-lg shadow-lg;
+  @apply bg-white dark:bg-gray-800;
+  @apply border border-gray-200 dark:border-gray-700;
+  @apply transform transition-all duration-300;
+}
+
+.notification[aria-hidden="true"] {
+  @apply translate-y-2 opacity-0 pointer-events-none;
+}
+
+/* Form Validation Styles */
+.form-error {
+  @apply text-red-500 text-sm mt-1;
+}
+
+[aria-invalid="true"] {
+  @apply border-red-500;
+}
+
+/* Loading Skeleton */
+.skeleton {
+  @apply animate-pulse bg-gray-200 dark:bg-gray-700 rounded;
+}
+
+/* Dialog/Modal Overlay */
+.modal-overlay {
+  @apply fixed inset-0 bg-black bg-opacity-50;
+  @apply backdrop-blur-sm transition-opacity;
+}
+
+/* Tooltip */
+.tooltip {
+  @apply absolute z-50 px-2 py-1 text-sm;
+  @apply bg-gray-900 text-white rounded;
+  @apply opacity-0 transition-opacity;
+}
+
+.tooltip[data-show] {
+  @apply opacity-100;
+}
+
+/* Progress Indicators */
+.progress-bar {
+  @apply relative h-2 w-full bg-gray-200 rounded-full overflow-hidden;
+}
+
+.progress-bar-fill {
+  @apply absolute h-full bg-primary transition-all duration-300;
+}
+
+/* Interactive Elements */
+.interactive {
+  @apply transition-colors duration-200;
+  @apply hover:bg-gray-100 dark:hover:bg-gray-800;
+  @apply active:bg-gray-200 dark:active:bg-gray-700;
+}
