@@ -1,6 +1,7 @@
 import Image from 'next/image';
 "use client";
 import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useRef } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -38,6 +39,8 @@ export function AdvancedReviewForm({
   onSubmit,
   className,
 }: AdvancedReviewFormProps) {
+  // Ref to track programmatic form mutations
+  const isMutatingRef = useRef<boolean>(false);
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
   const draftKey = useMemo(() => `review-draft-${itemId}`, [itemId]);
 
@@ -54,23 +57,22 @@ export function AdvancedReviewForm({
   useEffect(() => {
     const savedDraft = localStorage.getItem(draftKey);
     if (savedDraft) {
-  let parsed: { rating?: unknown; content?: unknown } | null = null;
+      let parsed: { rating?: unknown; content?: unknown } | null = null;
       try {
         parsed = JSON.parse(savedDraft);
       } catch (e) {
-        // Corrupt JSON, remove entry
         localStorage.removeItem(draftKey);
         return;
       }
-      // Validate parsed object
       const isValid = parsed && typeof parsed === 'object'
         && typeof parsed.rating === 'number'
         && typeof parsed.content === 'string';
       if (isValid && parsed !== null) {
+        isMutatingRef.current = true;
         const { rating, content } = parsed as { rating: number; content: string };
         form.reset({ rating, content, mediaFiles: [] });
+        isMutatingRef.current = false;
       } else {
-        // Legacy or invalid data, remove entry
         localStorage.removeItem(draftKey);
       }
     }
@@ -78,6 +80,7 @@ export function AdvancedReviewForm({
 
   // Save draft when form changes
   const saveDraft = useCallback((data: Partial<ReviewFormData>) => {
+    if (isMutatingRef.current) return;
     localStorage.setItem(draftKey, JSON.stringify({
       rating: data.rating,
       content: data.content,
@@ -86,6 +89,7 @@ export function AdvancedReviewForm({
 
   useEffect(() => {
     const subscription = form.watch((data) => {
+      if (isMutatingRef.current) return;
       // Ensure mediaFiles is File[] (no undefined)
       const filteredMediaFiles = Array.isArray(data.mediaFiles)
         ? data.mediaFiles.filter((file): file is File => !!file)
@@ -104,6 +108,7 @@ export function AdvancedReviewForm({
 
   const onSubmitForm = async (data: ReviewFormData) => {
     try {
+      isMutatingRef.current = true;
       await onSubmit({
         ...data,
         itemId,
@@ -111,7 +116,9 @@ export function AdvancedReviewForm({
       });
       clearDraft();
       form.reset();
+      isMutatingRef.current = false;
     } catch (error) {
+      isMutatingRef.current = false;
       // Parent handles the error (toast). Avoid rethrow to prevent unhandled rejections.
       return;
     }
