@@ -65,7 +65,7 @@ export class UsersService {
 
     // Only admins can change roles
     let roleChanged = false;
-    let oldRole = user.role;
+    const oldRole = user.role;
     if (dto.role && currentUser.role !== UserRoleInterface.ADMIN) {
       delete dto.role;
     } else if (dto.role && dto.role !== user.role) {
