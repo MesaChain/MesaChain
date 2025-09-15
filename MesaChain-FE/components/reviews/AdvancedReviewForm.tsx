@@ -1,6 +1,6 @@
 import Image from 'next/image';
 "use client";
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -39,7 +39,7 @@ export function AdvancedReviewForm({
   className,
 }: AdvancedReviewFormProps) {
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
-  const [draftKey] = useState(`review-draft-${itemId}`);
+  const draftKey = useMemo(() => `review-draft-${itemId}`, [itemId]);
 
   const form = useForm<ReviewFormData>({
     resolver: zodResolver(reviewSchema),

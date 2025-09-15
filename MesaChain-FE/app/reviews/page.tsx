@@ -18,7 +18,8 @@ interface ReviewPageProps {
 
 export default function ReviewPage(props: ReviewPageProps) {
   const searchParams = useSearchParams();
-  const itemId = props?.itemId ?? searchParams.get('itemId') ?? '';
+  const itemIdRaw = props?.itemId ?? searchParams.get('itemId');
+  const itemId = itemIdRaw && itemIdRaw.trim().length > 0 ? itemIdRaw.trim() : undefined;
   const itemTypeParam = (props?.itemType ?? (searchParams.get('itemType') as ReviewPageProps['itemType'] | null));
   const itemType = itemTypeParam ?? 'DISH';
   const className = props?.className;
@@ -53,11 +54,17 @@ export default function ReviewPage(props: ReviewPageProps) {
         </TabsContent>
 
         <TabsContent value="write" className="mt-6">
-          <AdvancedReviewForm
-            itemId={itemId}
-            itemType={itemType}
-            onSubmit={handleReviewSubmit}
-          />
+          {itemId ? (
+            <AdvancedReviewForm
+              itemId={itemId}
+              itemType={itemType}
+              onSubmit={handleReviewSubmit}
+            />
+          ) : (
+            <div className="p-6 text-center text-gray-500">
+              Please select an item to review before submitting.
+            </div>
+          )}
         </TabsContent>
       </Tabs>
     </div>

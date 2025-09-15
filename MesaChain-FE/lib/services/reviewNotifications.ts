@@ -13,20 +13,32 @@ type NotificationEvent =
 type NotificationHandler = (data: unknown) => void;
 
 class ReviewNotificationService {
+  private currentUserId: string | null = null;
+  private connectionListenerMap: Map<
+    (connected: boolean) => void,
+    { onConnect: () => void; onDisconnect: () => void }
+  > = new Map();
   public isConnected(): boolean {
     return !!this.socket?.connected;
   }
 
   public subscribeConnection(callback: (connected: boolean) => void) {
     if (!this.socket) return;
-    this.socket.on('connect', () => callback(true));
-    this.socket.on('disconnect', () => callback(false));
+    const onConnect = () => callback(true);
+    const onDisconnect = () => callback(false);
+    this.connectionListenerMap.set(callback, { onConnect, onDisconnect });
+    this.socket.on('connect', onConnect);
+    this.socket.on('disconnect', onDisconnect);
   }
 
   public unsubscribeConnection(callback: (connected: boolean) => void) {
     if (!this.socket) return;
-    this.socket.off('connect', () => callback(true));
-    this.socket.off('disconnect', () => callback(false));
+    const listeners = this.connectionListenerMap.get(callback);
+    if (listeners) {
+      this.socket.off('connect', listeners.onConnect);
+      this.socket.off('disconnect', listeners.onDisconnect);
+      this.connectionListenerMap.delete(callback);
+    }
   }
   private static instance: ReviewNotificationService;
   private socket: Socket | null = null;
@@ -45,7 +57,12 @@ class ReviewNotificationService {
   }
 
   connect(userId: string) {
-    if (this.socket?.connected) return;
+    if (this.currentUserId !== userId && this.socket) {
+      this.socket.disconnect();
+      this.socket = null;
+      this.currentUserId = null;
+    }
+    if (this.socket?.connected && this.currentUserId === userId) return;
 
     const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL_BACKEND || 'http://localhost:3000';
     this.socket = io(`${baseUrl}/reviews`, {
@@ -56,7 +73,7 @@ class ReviewNotificationService {
       reconnectionDelay: 1000,
       reconnectionDelayMax: 5000,
     });
-
+    this.currentUserId = userId;
     this.setupSocketListeners();
   }
 
@@ -69,6 +86,7 @@ class ReviewNotificationService {
 
     this.socket.on('disconnect', () => {
       console.log('Disconnected from review notification service');
+      this.currentUserId = null;
       // No manual reconnect; socket.io will handle it
     });
 
@@ -125,7 +143,7 @@ class ReviewNotificationService {
     const notifications = {
       'review-submitted': {
         title: 'New Review',
-  description: `A new review has been submitted for ${typeof data === 'object' && data && 'itemType' in data && typeof (data as any).itemType === 'string' ? (data as any).itemType.toLowerCase() : ''}`,
+  description: `A new review has been submitted for ${typeof data === 'object' && data && 'itemType' in data && typeof (data as { itemType?: string }).itemType === 'string' ? (data as { itemType: string }).itemType.toLowerCase() : ''}`,
       },
       'review-approved': {
         title: 'Review Approved',
@@ -137,7 +155,7 @@ class ReviewNotificationService {
       },
       'feedback-submitted': {
         title: 'New Feedback',
-  description: `New feedback received in ${typeof data === 'object' && data && 'category' in data && typeof (data as any).category === 'string' ? (data as any).category.toLowerCase() : ''} category`,
+  description: `New feedback received in ${typeof data === 'object' && data && 'category' in data && typeof (data as { category?: string }).category === 'string' ? (data as { category: string }).category.toLowerCase() : ''} category`,
       },
       'feedback-responded': {
         title: 'Feedback Response',
