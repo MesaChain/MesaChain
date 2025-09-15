@@ -100,6 +100,19 @@ export function AdvancedReviewForm({
     }
   };
 
+  // Memoize preview URLs for mediaFiles
+  const previewUrls = useMemo(() => {
+    const mediaFiles = form.watch('mediaFiles') ?? [];
+    return mediaFiles.map(file => URL.createObjectURL(file));
+  }, [form]);
+
+  // Cleanup object URLs when mediaFiles change or component unmounts
+  useEffect(() => {
+    return () => {
+      previewUrls.forEach(url => URL.revokeObjectURL(url));
+    };
+  }, [previewUrls]);
+
   const PreviewDialog = () => (
     <Dialog open={isPreviewOpen} onOpenChange={setIsPreviewOpen}>
       <DialogContent className="max-w-2xl">
@@ -114,27 +127,23 @@ export function AdvancedReviewForm({
             </span>
           </div>
           <p className="whitespace-pre-wrap">{form.getValues('content')}</p>
-          {(form.getValues('mediaFiles') ?? []).length > 0 && (
+          {previewUrls.length > 0 && (
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
-              {(form.getValues('mediaFiles') ?? []).map((file, index) => {
-                const url = URL.createObjectURL(file);
-                return (
-                  <div
-                    key={index}
-                    className="relative aspect-square rounded-lg overflow-hidden"
-                  >
-                    <Image
-                      src={url}
-                      alt={`Preview ${index + 1}`}
-                      className="object-cover w-full h-full"
-                      unoptimized
-                      width={100}
-                      height={100}
-                      onLoadingComplete={() => URL.revokeObjectURL(url)}
-                    />
-                  </div>
-                );
-              })}
+              {previewUrls.map((url, index) => (
+                <div
+                  key={index}
+                  className="relative aspect-square rounded-lg overflow-hidden"
+                >
+                  <Image
+                    src={url}
+                    alt={`Preview ${index + 1}`}
+                    className="object-cover w-full h-full"
+                    unoptimized
+                    width={100}
+                    height={100}
+                  />
+                </div>
+              ))}
             </div>
           )}
         </div>
