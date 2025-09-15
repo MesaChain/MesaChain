@@ -54,8 +54,25 @@ export function AdvancedReviewForm({
   useEffect(() => {
     const savedDraft = localStorage.getItem(draftKey);
     if (savedDraft) {
-      const { rating, content } = JSON.parse(savedDraft);
-      form.reset({ rating, content, mediaFiles: [] });
+  let parsed: { rating?: unknown; content?: unknown } | null = null;
+      try {
+        parsed = JSON.parse(savedDraft);
+      } catch (e) {
+        // Corrupt JSON, remove entry
+        localStorage.removeItem(draftKey);
+        return;
+      }
+      // Validate parsed object
+      const isValid = parsed && typeof parsed === 'object'
+        && typeof parsed.rating === 'number'
+        && typeof parsed.content === 'string';
+      if (isValid && parsed !== null) {
+        const { rating, content } = parsed as { rating: number; content: string };
+        form.reset({ rating, content, mediaFiles: [] });
+      } else {
+        // Legacy or invalid data, remove entry
+        localStorage.removeItem(draftKey);
+      }
     }
   }, [draftKey, form]);
 
