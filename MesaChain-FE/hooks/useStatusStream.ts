@@ -1,3 +1,4 @@
+"use client"
 import { useState, useEffect, useCallback } from 'react';
 
 export interface PaymentStatus {
@@ -16,15 +17,22 @@ export const useStatusStream = (intentId: string | null) => {
   const updateStatus = useCallback((newStatus: Partial<PaymentStatus>) => {
     if (!intentId) return;
     
-    setStatus(prev => prev ? {
-      ...prev,
-      ...newStatus,
-      lastUpdated: new Date(),
-    } : {
-      intentId,
-      status: 'pending',
-      lastUpdated: new Date(),
-      ...newStatus,
+    console.log('Status stream updating:', newStatus);
+    
+    setStatus(prev => {
+      const updated = prev ? {
+        ...prev,
+        ...newStatus,
+        lastUpdated: new Date(),
+      } : {
+        intentId,
+        status: 'pending' as const,
+        lastUpdated: new Date(),
+        ...newStatus,
+      };
+      
+      console.log('Status stream updated to:', updated);
+      return updated;
     });
   }, [intentId]);
 
@@ -35,6 +43,8 @@ export const useStatusStream = (intentId: string | null) => {
       return;
     }
 
+    console.log('Status stream initialized for intent:', intentId);
+
     // Initialize status
     setStatus({
       intentId,
@@ -43,8 +53,27 @@ export const useStatusStream = (intentId: string | null) => {
     });
     setIsConnected(true);
 
-    // Listen for custom events (simulating real-time updates)
+    // Listen for payment events
+    const handleCheckoutStarted = (event: CustomEvent) => {
+      console.log('Status stream: checkout_started event', event.detail);
+      if (event.detail.intentId === intentId) {
+        updateStatus({
+          status: 'pending',
+        });
+      }
+    };
+
+    const handlePaymentProcessing = (event: CustomEvent) => {
+      console.log('Status stream: payment_processing event', event.detail);
+      if (event.detail.intentId === intentId) {
+        updateStatus({
+          status: 'processing',
+        });
+      }
+    };
+
     const handlePaymentConfirmed = (event: CustomEvent) => {
+      console.log('Status stream: payment_confirmed event', event.detail);
       if (event.detail.intentId === intentId) {
         updateStatus({
           status: 'confirmed',
@@ -55,6 +84,7 @@ export const useStatusStream = (intentId: string | null) => {
     };
 
     const handlePaymentFailed = (event: CustomEvent) => {
+      console.log('Status stream: payment_failed event', event.detail);
       if (event.detail.intentId === intentId) {
         updateStatus({
           status: 'failed',
@@ -62,27 +92,39 @@ export const useStatusStream = (intentId: string | null) => {
       }
     };
 
-    window.addEventListener('payment_confirmed', handlePaymentConfirmed as EventListener);
-    window.addEventListener('payment_failed', handlePaymentFailed as EventListener);
-
-    // Simulate periodic status updates for processing payments
-    const interval = setInterval(() => {
-      if (status?.status === 'processing') {
-        // Simulate block confirmations
+    const handlePaymentCancelled = (event: CustomEvent) => {
+      console.log('Status stream: payment_cancelled event', event.detail);
+      if (event.detail.intentId === intentId) {
         updateStatus({
-          blockConfirmations: Math.min((status.blockConfirmations || 0) + 1, 6),
-          estimatedConfirmationTime: Math.max(0, (status.estimatedConfirmationTime || 30) - 5),
+          status: 'cancelled',
         });
       }
-    }, 5000);
+    };
+
+    // Add event listeners
+    window.addEventListener('checkout_started', handleCheckoutStarted as EventListener);
+    window.addEventListener('payment_processing', handlePaymentProcessing as EventListener);
+    window.addEventListener('payment_confirmed', handlePaymentConfirmed as EventListener);
+    window.addEventListener('payment_failed', handlePaymentFailed as EventListener);
+    window.addEventListener('payment_cancelled', handlePaymentCancelled as EventListener);
 
     return () => {
+      console.log('Status stream cleanup for intent:', intentId);
+      window.removeEventListener('checkout_started', handleCheckoutStarted as EventListener);
+      window.removeEventListener('payment_processing', handlePaymentProcessing as EventListener);
       window.removeEventListener('payment_confirmed', handlePaymentConfirmed as EventListener);
       window.removeEventListener('payment_failed', handlePaymentFailed as EventListener);
-      clearInterval(interval);
+      window.removeEventListener('payment_cancelled', handlePaymentCancelled as EventListener);
       setIsConnected(false);
     };
-  }, [intentId, updateStatus, status?.status, status?.blockConfirmations, status?.estimatedConfirmationTime]);
+  }, [intentId, updateStatus]);
+
+  // Debug effect to log status changes
+  useEffect(() => {
+    if (status) {
+      console.log('Status stream state changed:', status);
+    }
+  }, [status]);
 
   return {
     status,

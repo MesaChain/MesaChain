@@ -1,5 +1,7 @@
+// hooks/useWallet.ts - Simplified and More Reliable Version
 import { useState, useCallback, useEffect } from 'react';
 import { StellarWalletsKit, WalletNetwork, allowAllModules } from '@creit.tech/stellar-wallets-kit';
+import toast from 'react-hot-toast';
 
 export interface WalletState {
   isConnected: boolean;
@@ -7,6 +9,13 @@ export interface WalletState {
   balance: number | null;
   network: WalletNetwork;
 }
+
+// Create kit instance outside of hook to ensure it's shared
+const kit = new StellarWalletsKit({
+  network: WalletNetwork.TESTNET,
+  selectedWalletId: '',
+  modules: allowAllModules(),
+});
 
 export const useWallet = () => {
   const [walletState, setWalletState] = useState<WalletState>({
@@ -18,47 +27,70 @@ export const useWallet = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const kit = new StellarWalletsKit({
-    network: WalletNetwork.TESTNET,
-    selectedWalletId: 'freighter',
-    modules: allowAllModules(),
-  });
-
   const connectWallet = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
+      console.log('Starting wallet connection...');
 
       await kit.openModal({
         onWalletSelected: async (option) => {
-          kit.setWallet(option.id);
-          const { address } = await kit.getAddress();
+          console.log('Wallet selected:', option.id);
           
-          // Simulate balance fetch
-          const mockBalance = 1250.50; // Mock USDC balance
-          
-          setWalletState({
-            isConnected: true,
-            address: address,
-            balance: mockBalance,
-            network: WalletNetwork.TESTNET,
-          });
+          try {
+            kit.setWallet(option.id);
+            const { address } = await kit.getAddress();
+            console.log('Got wallet address:', address);
+            
+            const mockBalance = 1250.50;
+            
+            // Update state directly - no functional update
+            const newState = {
+              isConnected: true,
+              address: address,
+              balance: mockBalance,
+              network: WalletNetwork.TESTNET,
+            };
+            
+            console.log('Setting new wallet state:', newState);
+            setWalletState(newState);
+            
+            // Verify state was set
+            setTimeout(() => {
+              console.log('State verification - should be connected now');
+            }, 100);
+
+            toast.success('Wallet connected successfully!');
+          } catch (err) {
+            console.error('Error in wallet selection:', err);
+            setError('Failed to connect wallet');
+            toast.error('Failed to connect wallet');
+          } finally {
+            setLoading(false);
+          }
         },
+        onClosed: () => {
+          console.log('Wallet modal closed');
+          setLoading(false);
+        }
       });
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to connect wallet');
-    } finally {
+      console.error('Error opening wallet modal:', err);
+      setError('Failed to open wallet selection');
+      toast.error('Failed to open wallet selection');
       setLoading(false);
     }
-  }, [kit]);
+  }, []);
 
   const disconnectWallet = useCallback(() => {
+    console.log('Disconnecting wallet');
     setWalletState({
       isConnected: false,
       address: null,
       balance: null,
       network: WalletNetwork.TESTNET,
     });
+    toast.success('Wallet disconnected');
   }, []);
 
   const signTransaction = useCallback(async (xdr: string) => {
@@ -72,33 +104,41 @@ export const useWallet = () => {
 
       return signedTxXdr;
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to sign transaction');
+      const errorMessage = err instanceof Error ? err.message : 'Failed to sign transaction';
+      setError(errorMessage);
+      toast.error(errorMessage);
       throw err;
     } finally {
       setLoading(false);
     }
-  }, [kit]);
+  }, []);
 
-  // Check for existing wallet connection on mount
+  // Check for existing connection on mount
   useEffect(() => {
-    const checkConnection = async () => {
+    const checkExistingConnection = async () => {
       try {
         const { address } = await kit.getAddress();
         if (address) {
+          console.log('Found existing wallet connection:', address);
           setWalletState(prev => ({
             ...prev,
             isConnected: true,
             address: address,
-            balance: 1250.50, // Mock balance
+            balance: 1250.50,
           }));
         }
-      } catch {
-        // No existing connection
+      } catch (err) {
+        console.log('No existing wallet connection');
       }
     };
 
-    checkConnection();
-  }, [kit]);
+    checkExistingConnection();
+  }, []);
+
+  // Debug effect to log all state changes
+  useEffect(() => {
+    console.log('useWallet - Wallet state changed:', walletState);
+  }, [walletState]);
 
   return {
     walletState,

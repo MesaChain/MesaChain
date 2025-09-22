@@ -26,19 +26,18 @@ const mockOrders: Record<string, Order> = {
     id: 'table-5-order-123',
     tableNumber: 5,
     items: [
-      { id: '1', name: 'Truffle Pasta', price: 28.50, quantity: 2, category: 'Main' },
+      { id: '1', name: 'Truffle Pasta', price: 28.50, quantity: 1, category: 'Main' },
       { id: '2', name: 'Caesar Salad', price: 16.00, quantity: 1, category: 'Starter' },
-      { id: '3', name: 'Wine - Pinot Noir', price: 12.00, quantity: 2, category: 'Drinks' },
-      { id: '4', name: 'Tiramisu', price: 9.50, quantity: 1, category: 'Dessert' },
     ],
-    subtotal: 94.50,
-    tax: 8.51,
-    serviceFee: 4.73,
-    total: 107.74,
+    subtotal: 44.50,
+    tax: 4.01,          
+    serviceFee: 2.23,   
+    total: 50.74,
     status: 'ready',
     createdAt: new Date(),
   },
 };
+
 
 export const useOrder = (orderId: string | null) => {
   const [order, setOrder] = useState<Order | null>(null);
