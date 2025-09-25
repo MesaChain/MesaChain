@@ -207,10 +207,11 @@ export default function DataTableDemo() {
     <div className="p-6 max-w-7xl mx-auto">
       <div className="mb-6">
         <h1 className="text-3xl font-bold text-gray-900 mb-2">
-          DataTable Component Demo
+          Interactive DataTable Component
         </h1>
         <p className="text-gray-600">
-          Interactive data table with sorting, filtering, pagination, and row selection.
+          A comprehensive data table with sorting, filtering, pagination, row selection, 
+          expandable rows, export functionality, and full accessibility support.
         </p>
       </div>
 
@@ -226,75 +227,49 @@ export default function DataTableDemo() {
         </Button>
       </div>
 
-      <div className="space-y-6">
-        {/* Basic Table */}
-        <div>
-          <h2 className="text-xl font-semibold mb-3">Basic Table</h2>
-          <DataTable
-            data={data}
-            columns={columns}
-            onRowClick={handleRowClick}
-            onRowSelect={handleRowSelect}
-            loading={loading}
-            striped
-            hoverable
-          />
-        </div>
-
-        {/* Table with Selection */}
-        <div>
-          <h2 className="text-xl font-semibold mb-3">Table with Row Selection</h2>
-          <DataTable
-            data={data}
-            columns={columns}
-            selectable
-            onRowSelect={handleRowSelect}
-            onExport={handleExport}
-            exportable
-            exportFormats={['csv', 'json']}
-          />
-        </div>
-
-        {/* Table with Expandable Rows */}
-        <div>
-          <h2 className="text-xl font-semibold mb-3">Table with Expandable Rows</h2>
-          <DataTable
-            data={data.slice(0, 3)} // Show only first 3 for demo
-            columns={columns.filter(col => col.key !== 'actions')}
-            expandable
-            onRowExpand={(row) => console.log('Row expanded:', row)}
-            maxHeight="400px"
-          />
-        </div>
-
-        {/* Server-side Table Simulation */}
-        <div>
-          <h2 className="text-xl font-semibold mb-3">Server-side Data Simulation</h2>
-          <DataTable
-            data={Promise.resolve(data)}
-            columns={columns}
-            serverSide
-            onSortChange={(sort) => console.log('Sort changed:', sort)}
-            onFilterChange={(filters) => console.log('Filters changed:', filters)}
-            onPageChange={(page) => console.log('Page changed:', page)}
-          />
-        </div>
+      {/* Single Comprehensive DataTable */}
+      <div className="bg-white rounded-lg border border-gray-200 shadow-sm">
+        <DataTable
+          data={data}
+          columns={columns}
+          selectable
+          expandable
+          exportable
+          exportFormats={['csv', 'json']}
+          onRowClick={handleRowClick}
+          onRowSelect={handleRowSelect}
+          onExport={handleExport}
+          onBulkAction={handleBulkAction}
+          onRowExpand={(row) => console.log('Row expanded:', row)}
+          onSortChange={(sort) => console.log('Sort changed:', sort)}
+          onFilterChange={(filters) => console.log('Filters changed:', filters)}
+          onPageChange={(page) => console.log('Page changed:', page)}
+          loading={loading}
+          striped
+          hoverable
+          maxHeight="600px"
+          bulkActions={[
+            { label: 'Delete Selected', action: 'delete', variant: 'destructive' },
+            { label: 'Mark as Completed', action: 'complete' },
+            { label: 'Export Selected', action: 'export' }
+          ]}
+        />
       </div>
 
       <div className="mt-8 p-4 bg-gray-50 rounded-lg">
-        <h3 className="text-lg font-semibold mb-2">Features Demonstrated:</h3>
+        <h3 className="text-lg font-semibold mb-2">Features Implemented:</h3>
         <ul className="list-disc list-inside space-y-1 text-sm text-gray-700">
-          <li>Sorting by clicking column headers</li>
-          <li>Filtering with search and column filters</li>
-          <li>Pagination with configurable page sizes</li>
-          <li>Row selection (single and multi-select)</li>
-          <li>Bulk actions on selected rows</li>
-          <li>Export to CSV and JSON</li>
-          <li>Expandable rows for detailed views</li>
-          <li>Custom cell renderers</li>
-          <li>Loading states</li>
-          <li>Responsive design</li>
-          <li>Accessibility features</li>
+          <li><strong>Sorting:</strong> Click column headers to sort ascending/descending</li>
+          <li><strong>Filtering:</strong> Global search and individual column filters</li>
+          <li><strong>Pagination:</strong> Configurable page sizes with navigation controls</li>
+          <li><strong>Row Selection:</strong> Single and multi-select with bulk actions</li>
+          <li><strong>Export:</strong> Export to CSV and JSON formats</li>
+          <li><strong>Expandable Rows:</strong> Click expand button to see row details</li>
+          <li><strong>Custom Renderers:</strong> Status badges, payment method badges, formatted currency</li>
+          <li><strong>Loading States:</strong> Skeleton screens during data loading</li>
+          <li><strong>Responsive Design:</strong> Mobile-friendly with horizontal scrolling</li>
+          <li><strong>Accessibility:</strong> Full keyboard navigation and ARIA support</li>
+          <li><strong>Server-side Support:</strong> Ready for server-side data handling</li>
         </ul>
       </div>
     </div>
