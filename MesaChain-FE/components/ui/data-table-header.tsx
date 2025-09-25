@@ -14,7 +14,10 @@ export const TableHeader = <T = any>({
   onSort,
   onFilter,
   onClearFilter,
-  className
+  className,
+  isAllSelected = false,
+  isIndeterminate = false,
+  onToggleAll
 }: TableHeaderProps<T>) => {
   const [filterValues, setFilterValues] = useState<Record<string, string>>({});
 
@@ -61,6 +64,11 @@ export const TableHeader = <T = any>({
             <input
               type="checkbox"
               className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+              checked={isAllSelected}
+              ref={(input) => {
+                if (input) input.indeterminate = isIndeterminate;
+              }}
+              onChange={onToggleAll}
               aria-label="Select all rows"
             />
           </th>

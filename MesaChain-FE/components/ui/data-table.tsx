@@ -252,6 +252,9 @@ export const DataTable = <T extends Record<string, any>>({
             onSort={handleSort}
             onFilter={handleFilter}
             onClearFilter={handleClearFilter}
+            isAllSelected={selection.isAllSelected}
+            isIndeterminate={selection.isIndeterminate}
+            onToggleAll={toggleAllSelection}
           />
           <TableBody
             data={processedData}

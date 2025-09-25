@@ -159,6 +159,10 @@ export interface TableHeaderProps<T = any> {
   onFilter: (field: string, value: any, operator?: FilterConfig['operator']) => void;
   onClearFilter: (field: string) => void;
   className?: string;
+  // selection (for select-all checkbox in header)
+  isAllSelected?: boolean;
+  isIndeterminate?: boolean;
+  onToggleAll?: () => void;
 }
 
 export interface TableBodyProps<T = any> {

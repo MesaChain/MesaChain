@@ -62,39 +62,44 @@ export const useTable = <T = any>({
     staleTime: 5 * 60 * 1000,
   });
 
-  // Get the actual data to work with
-  const rawData = useMemo(() => {
+  // Normalize incoming data and capture optional server total
+  const { rows, serverTotal } = useMemo(() => {
     if (serverSide) {
-      return serverData || [];
+      if (Array.isArray(serverData)) {
+        return { rows: serverData as T[], serverTotal: undefined as number | undefined };
+      }
+      if (serverData && Array.isArray((serverData as any).data)) {
+        const d = serverData as { data: T[]; total?: number };
+        return { rows: d.data, serverTotal: d.total };
+      }
+      return { rows: [] as T[], serverTotal: 0 };
     }
     if (Array.isArray(data)) {
-      return data;
+      return { rows: data as T[], serverTotal: (data as T[]).length };
     }
-    return [];
+    return { rows: [] as T[], serverTotal: 0 };
   }, [data, serverData, serverSide]);
 
   // Process data with sorting, filtering, and searching
   const processedData = useMemo(() => {
-    let result = [...rawData];
+    let result = [...rows];
 
-    // Apply search
-    if (searchTerm.trim()) {
+    // Apply client-side transforms only in client mode
+    if (!serverSide && searchTerm.trim()) {
       const searchFields = columns.map(col => col.key);
       result = searchData(result, searchTerm, searchFields);
     }
 
-    // Apply filters
-    if (filters.length > 0) {
+    if (!serverSide && filters.length > 0) {
       result = filterData(result, filters);
     }
 
-    // Apply sorting
-    if (sortConfig) {
+    if (!serverSide && sortConfig) {
       result = sortData(result, sortConfig);
     }
 
     return result;
-  }, [rawData, searchTerm, filters, sortConfig, columns]);
+  }, [rows, searchTerm, filters, sortConfig, columns, serverSide]);
 
   // Calculate pagination
   const paginationConfig: PaginationConfig = useMemo(() => {
@@ -107,8 +112,8 @@ export const useTable = <T = any>({
       };
     }
 
-    const total = processedData.length;
-    const totalPages = Math.ceil(total / pageSize);
+    const total = serverSide ? (serverTotal ?? processedData.length) : processedData.length;
+    const totalPages = Math.max(1, Math.ceil(total / pageSize));
     
     return {
       page: currentPage,
@@ -116,7 +121,7 @@ export const useTable = <T = any>({
       total,
       totalPages
     };
-  }, [processedData.length, currentPage, pageSize, pagination]);
+  }, [processedData.length, currentPage, pageSize, pagination, serverSide, serverTotal]);
 
   // Get paginated data
   const paginatedData = useMemo(() => {
@@ -213,10 +218,12 @@ export const useTable = <T = any>({
     setSelectedRows(prev => {
       const isSelected = selectedRowIds.has(key);
       if (isSelected) {
-        return prev.filter(r => getRowKey(r, 0, rowKey) !== key);
-      } else {
-        return [...prev, row];
+        return prev.filter(r => {
+          const i = processedData.findIndex(x => x === r);
+          return getRowKey(r, i >= 0 ? i : 0, rowKey) !== key;
+        });
       }
+      return [...prev, row];
     });
 
     setSelectedRowIds(prev => {
@@ -253,10 +260,10 @@ export const useTable = <T = any>({
 
   // Reset selection when data changes
   useEffect(() => {
-    if (selectable) {
+    if (selectable && !serverSide) {
       clearSelection();
     }
-  }, [rawData, clearSelection, selectable]);
+  }, [rows, clearSelection, selectable, serverSide]);
 
   return {
     processedData: paginatedData,
@@ -318,10 +325,12 @@ export const useTableSelection = <T = any>(data: T[], rowKey?: string | ((row: T
     setSelectedRows(prev => {
       const isSelected = selectedRowIds.has(key);
       if (isSelected) {
-        return prev.filter(r => getRowKey(r, 0, rowKey) !== key);
-      } else {
-        return [...prev, row];
+        return prev.filter(r => {
+          const i = data.findIndex(x => x === r);
+          return getRowKey(r, i >= 0 ? i : 0, rowKey) !== key;
+        });
       }
+      return [...prev, row];
     });
 
     setSelectedRowIds(prev => {
@@ -351,9 +360,10 @@ export const useTableSelection = <T = any>(data: T[], rowKey?: string | ((row: T
   }, []);
 
   const isSelected = useCallback((row: T) => {
-    const key = getRowKey(row, 0, rowKey);
+    const idx = data.findIndex(r => r === row);
+    const key = getRowKey(row, idx >= 0 ? idx : 0, rowKey);
     return selectedRowIds.has(key);
-  }, [selectedRowIds, rowKey]);
+  }, [selectedRowIds, rowKey, data]);
 
   const isAllSelected = selectedRows.length === data.length && data.length > 0;
   const isIndeterminate = selectedRows.length > 0 && selectedRows.length < data.length;
