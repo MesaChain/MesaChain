@@ -271,7 +271,7 @@ export const DataTable = <T extends Record<string, any>>({
 };
 
 // Helper function to get row key
-const getRowKey = <T>(row: T, index: number, rowKey?: string | ((row: T) => string)): string => {
+const getRowKey = <T,>(row: T, index: number, rowKey?: string | ((row: T) => string)): string => {
   if (typeof rowKey === 'function') {
     return rowKey(row);
   }
