@@ -159,6 +159,7 @@ export const TableHeader = <T = any>({
                     />
                     {hasActiveFilter && (
                       <Button
+                        type="button"
                         variant="ghost"
                         size="sm"
                         onClick={() => handleClearFilter(column.key)}

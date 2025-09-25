@@ -33,8 +33,6 @@ export const TableCell = <T = any>({
         minWidth: column.minWidth,
         maxWidth: column.maxWidth
       }}
-      role="gridcell"
-      aria-label={`${column.key}: ${String(cellContent)}`}
     >
       {cellContent}
     </td>

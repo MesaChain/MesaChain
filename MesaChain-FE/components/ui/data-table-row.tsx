@@ -21,15 +21,21 @@ export const TableRow = <T = any>({
   const visibleColumns = columns.filter(col => !col.hidden);
 
   const handleRowClick = (e: React.MouseEvent) => {
-    // Don't trigger row click if clicking on checkbox or expand button
-    if ((e.target as HTMLElement).closest('input[type="checkbox"]') || 
-        (e.target as HTMLElement).closest('button[data-expand]')) {
+    // Don't trigger row click if clicking on interactive elements
+    const target = e.target as HTMLElement;
+    if (
+      target.closest('input[type="checkbox"], button, [role="button"], a, [data-expand]')
+    ) {
       return;
     }
     onClick?.();
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
+    const target = e.target as HTMLElement;
+    if (target.closest('input[type="checkbox"], button, [role="button"], a, [data-expand]')) {
+      return;
+    }
     if (e.key === 'Enter' || e.key === ' ') {
       e.preventDefault();
       onClick?.();

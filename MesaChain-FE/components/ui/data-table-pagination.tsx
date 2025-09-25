@@ -24,7 +24,10 @@ export const TablePagination = ({
   };
 
   const handlePageSizeChange = (newPageSize: string) => {
-    onPageSizeChange(parseInt(newPageSize));
+    const parsed = Number.parseInt(newPageSize, 10);
+    if (Number.isFinite(parsed) && parsed > 0) {
+      onPageSizeChange(parsed);
+    }
   };
 
   const getPageNumbers = () => {
@@ -72,7 +75,7 @@ export const TablePagination = ({
   }
 
   return (
-    <div className={cn('flex items-center justify-between px-4 py-3 bg-white border-t border-gray-200', className)}>
+    <div className={cn('flex items-center justify-between px-4 py-3 bg-background border-t border-border', className)}>
       {/* Page size selector */}
       <div className="flex items-center space-x-2">
         <span className="text-sm text-gray-700">Rows per page:</span>

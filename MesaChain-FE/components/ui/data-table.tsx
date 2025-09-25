@@ -40,6 +40,8 @@ export const DataTable = <T extends Record<string, any>>({
   exportable = false,
   exportFormats = ['csv', 'json'],
   onExport,
+  bulkActions,
+  onBulkAction,
   ...props
 }: DataTableProps<T>) => {
   const {
@@ -206,7 +208,8 @@ export const DataTable = <T extends Record<string, any>>({
         searchValue={searchTerm}
         onSearchChange={setSearchTerm}
         selectedRows={selection.selectedRows}
-        onBulkAction={handleBulkAction}
+        onBulkAction={onBulkAction ?? handleBulkAction}
+        bulkActions={bulkActions}
         exportable={exportable}
         exportFormats={exportFormats}
         onExport={handleExport}

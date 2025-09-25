@@ -44,7 +44,15 @@ export interface SelectionConfig<T = any> {
 }
 
 export interface DataTableProps<T = any> {
-  data: T[] | Promise<T[]>;
+  data: 
+    | T[] 
+    | Promise<T[]>
+    | ((params: {
+        sort?: SortConfig | null;
+        filters?: FilterConfig[];
+        page?: number;
+        pageSize?: number;
+      }) => Promise<T[] | { data: T[]; total?: number }>);
   columns: ColumnDefinition<T>[];
   pagination?: boolean;
   serverSide?: boolean;
@@ -52,7 +60,7 @@ export interface DataTableProps<T = any> {
   expandable?: boolean;
   loading?: boolean;
   error?: string | null;
-  onSortChange?: (sort: SortConfig) => void;
+  onSortChange?: (sort: SortConfig | null) => void;
   onFilterChange?: (filters: FilterConfig[]) => void;
   onPageChange?: (page: number) => void;
   onPageSizeChange?: (pageSize: number) => void;
@@ -75,10 +83,25 @@ export interface DataTableProps<T = any> {
   exportable?: boolean;
   exportFormats?: ('csv' | 'json' | 'excel')[];
   onExport?: (format: string, data: T[]) => void;
+  bulkActions?: Array<{
+    label: string;
+    action: string;
+    icon?: React.ReactNode;
+    variant?: 'default' | 'destructive' | 'outline' | 'secondary' | 'ghost' | 'link';
+  }>;
+  onBulkAction?: (action: string, rows: T[]) => void;
 }
 
 export interface UseTableProps<T = any> {
-  data: T[] | Promise<T[]>;
+  data: 
+    | T[] 
+    | Promise<T[]>
+    | ((params: {
+        sort?: SortConfig | null;
+        filters?: FilterConfig[];
+        page?: number;
+        pageSize?: number;
+      }) => Promise<T[] | { data: T[]; total?: number }>);
   columns: ColumnDefinition<T>[];
   serverSide?: boolean;
   pagination?: boolean;
@@ -108,6 +131,11 @@ export interface UseTableReturn<T = any> {
   toggleAllSelection: () => void;
   clearSelection: () => void;
   refresh: () => void;
+  // added by hook implementation
+  searchTerm: string;
+  setSearchTerm: (value: string) => void;
+  expandedRows: Set<string>;
+  setExpandedRows: React.Dispatch<React.SetStateAction<Set<string>>>;
 }
 
 export interface TableToolbarProps<T = any> {
@@ -188,7 +216,7 @@ export interface TableCellProps<T = any> {
 
 // Utility types
 export type TableEventHandlers<T = any> = {
-  onSortChange?: (sort: SortConfig) => void;
+  onSortChange?: (sort: SortConfig | null) => void;
   onFilterChange?: (filters: FilterConfig[]) => void;
   onPageChange?: (page: number) => void;
   onPageSizeChange?: (pageSize: number) => void;

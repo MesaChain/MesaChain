@@ -104,7 +104,7 @@ export function OrderTableNew({
           <Button
             size="sm"
             variant="ghost"
-            onClick={() => onOrderView?.(order)}
+            onClick={(e) => { e.stopPropagation(); onOrderView?.(order); }}
             className="h-8 w-8 p-0"
             aria-label={`View order ${order.id}`}
           >
@@ -113,7 +113,7 @@ export function OrderTableNew({
           <Button
             size="sm"
             variant="ghost"
-            onClick={() => onOrderEdit?.(order)}
+            onClick={(e) => { e.stopPropagation(); onOrderEdit?.(order); }}
             className="h-8 w-8 p-0"
             aria-label={`Edit order ${order.id}`}
           >
@@ -122,7 +122,7 @@ export function OrderTableNew({
           <Button
             size="sm"
             variant="ghost"
-            onClick={() => onOrderDelete?.(order)}
+            onClick={(e) => { e.stopPropagation(); onOrderDelete?.(order); }}
             className="h-8 w-8 p-0 text-red-600 hover:text-red-700 hover:bg-red-50"
             aria-label={`Delete order ${order.id}`}
           >

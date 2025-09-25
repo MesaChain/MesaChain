@@ -46,14 +46,20 @@ export const useTable = <T = any>({
   // Handle data fetching for server-side mode
   const { data: serverData, isLoading, error, refetch } = useQuery({
     queryKey: ['table-data', sortConfig, filters, currentPage, pageSize],
-    queryFn: async () => {
+    queryFn: async (): Promise<any> => {
       if (typeof data === 'function') {
-        return await data();
+        const result = await data({
+          sort: sortConfig,
+          filters,
+          page: currentPage,
+          pageSize,
+        });
+        return result;
       }
       return data;
     },
     enabled: serverSide,
-    staleTime: 5 * 60 * 1000, // 5 minutes
+    staleTime: 5 * 60 * 1000,
   });
 
   // Get the actual data to work with
@@ -114,13 +120,13 @@ export const useTable = <T = any>({
 
   // Get paginated data
   const paginatedData = useMemo(() => {
-    if (!pagination) {
+    if (!pagination || serverSide) {
       return processedData;
     }
     
     const { paginatedData: result } = paginateData(processedData, currentPage, pageSize);
     return result;
-  }, [processedData, currentPage, pageSize, pagination]);
+  }, [processedData, currentPage, pageSize, pagination, serverSide]);
 
   // Selection state
   const selection: SelectionConfig<T> = useMemo(() => {
@@ -189,8 +195,11 @@ export const useTable = <T = any>({
   }, []);
 
   const setPage = useCallback((page: number) => {
-    setCurrentPage(Math.max(1, Math.min(page, paginationConfig.totalPages)));
-  }, [paginationConfig.totalPages]);
+    setCurrentPage(prev => {
+      const next = Math.max(1, page);
+      return serverSide ? next : Math.min(next, paginationConfig.totalPages);
+    });
+  }, [paginationConfig.totalPages, serverSide]);
 
   const handlePageSizeChange = useCallback((newPageSize: number) => {
     setPageSize(newPageSize);
@@ -198,7 +207,8 @@ export const useTable = <T = any>({
   }, []);
 
   const toggleRowSelection = useCallback((row: T) => {
-    const key = getRowKey(row, 0, rowKey);
+    const idx = paginatedData.findIndex(r => r === row);
+    const key = getRowKey(row, idx >= 0 ? idx : 0, rowKey);
     
     setSelectedRows(prev => {
       const isSelected = selectedRowIds.has(key);
@@ -218,7 +228,7 @@ export const useTable = <T = any>({
       }
       return newSet;
     });
-  }, [selectedRowIds, rowKey]);
+  }, [selectedRowIds, rowKey, paginatedData]);
 
   const toggleAllSelection = useCallback(() => {
     if (selection.isAllSelected) {
@@ -302,7 +312,8 @@ export const useTableSelection = <T = any>(data: T[], rowKey?: string | ((row: T
   const [selectedRowIds, setSelectedRowIds] = useState<Set<string>>(new Set());
 
   const toggleRow = useCallback((row: T) => {
-    const key = getRowKey(row, 0, rowKey);
+    const idx = data.findIndex(r => r === row);
+    const key = getRowKey(row, idx >= 0 ? idx : 0, rowKey);
     
     setSelectedRows(prev => {
       const isSelected = selectedRowIds.has(key);
@@ -322,7 +333,7 @@ export const useTableSelection = <T = any>(data: T[], rowKey?: string | ((row: T
       }
       return newSet;
     });
-  }, [selectedRowIds, rowKey]);
+  }, [selectedRowIds, rowKey, data]);
 
   const toggleAll = useCallback(() => {
     if (selectedRows.length === data.length && data.length > 0) {
