@@ -5,7 +5,7 @@ import { TableHeader } from './data-table-header';
 import { TableBody } from './data-table-body';
 import { TablePagination } from './data-table-pagination';
 import { TableToolbar } from './data-table-toolbar';
-import { exportToCSV, exportToJSON, exportToExcel } from './data-table-utils';
+import { exportToCSV, exportToJSON, exportToExcel, getRowKey } from './data-table-utils';
 import { cn } from '@/lib/utils';
 
 export const DataTable = <T extends Record<string, any>>({
@@ -160,19 +160,23 @@ export const DataTable = <T extends Record<string, any>>({
   };
 
   const handleBulkAction = (action: string, rows: T[]) => {
-    // Default bulk actions
-    switch (action) {
-      case 'delete':
-        console.log('Delete selected rows:', rows);
-        break;
-      case 'edit':
-        console.log('Edit selected rows:', rows);
-        break;
-      case 'copy':
-        console.log('Copy selected rows:', rows);
-        break;
-      default:
-        console.log('Custom bulk action:', action, rows);
+    if (onBulkAction) {
+      onBulkAction(action, rows);
+    } else {
+      // Default bulk actions
+      switch (action) {
+        case 'delete':
+          console.log('Delete selected rows:', rows);
+          break;
+        case 'edit':
+          console.log('Edit selected rows:', rows);
+          break;
+        case 'copy':
+          console.log('Copy selected rows:', rows);
+          break;
+        default:
+          console.log('Custom bulk action:', action, rows);
+      }
     }
   };
 
@@ -208,7 +212,7 @@ export const DataTable = <T extends Record<string, any>>({
         searchValue={searchTerm}
         onSearchChange={setSearchTerm}
         selectedRows={selection.selectedRows}
-        onBulkAction={onBulkAction ?? handleBulkAction}
+        onBulkAction={handleBulkAction}
         bulkActions={bulkActions}
         exportable={exportable}
         exportFormats={exportFormats}
@@ -268,15 +272,4 @@ export const DataTable = <T extends Record<string, any>>({
       )}
     </div>
   );
-};
-
-// Helper function to get row key
-const getRowKey = <T,>(row: T, index: number, rowKey?: string | ((row: T) => string)): string => {
-  if (typeof rowKey === 'function') {
-    return rowKey(row);
-  }
-  if (typeof rowKey === 'string') {
-    return (row as any)[rowKey] || String(index);
-  }
-  return String(index);
 };

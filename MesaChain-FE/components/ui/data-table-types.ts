@@ -44,15 +44,12 @@ export interface SelectionConfig<T = any> {
 }
 
 export interface DataTableProps<T = any> {
-  data: 
-    | T[] 
-    | Promise<T[]>
-    | ((params: {
-        sort?: SortConfig | null;
-        filters?: FilterConfig[];
-        page?: number;
-        pageSize?: number;
-      }) => Promise<T[] | { data: T[]; total?: number }>);
+  data: T[] | Promise<T[]> | ((params: {
+    sort?: SortConfig | null;
+    filters?: FilterConfig[];
+    page?: number;
+    pageSize?: number;
+  }) => Promise<T[] | { data: T[]; total?: number }>);
   columns: ColumnDefinition<T>[];
   pagination?: boolean;
   serverSide?: boolean;
@@ -93,15 +90,12 @@ export interface DataTableProps<T = any> {
 }
 
 export interface UseTableProps<T = any> {
-  data: 
-    | T[] 
-    | Promise<T[]>
-    | ((params: {
-        sort?: SortConfig | null;
-        filters?: FilterConfig[];
-        page?: number;
-        pageSize?: number;
-      }) => Promise<T[] | { data: T[]; total?: number }>);
+  data: T[] | Promise<T[]> | ((params: {
+    sort?: SortConfig | null;
+    filters?: FilterConfig[];
+    page?: number;
+    pageSize?: number;
+  }) => Promise<T[] | { data: T[]; total?: number }>);
   columns: ColumnDefinition<T>[];
   serverSide?: boolean;
   pagination?: boolean;
