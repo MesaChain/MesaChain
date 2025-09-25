@@ -14,8 +14,8 @@ export const TablePagination = ({
 }: TablePaginationProps) => {
   const { page, pageSize, total, totalPages } = pagination;
 
-  const startItem = (page - 1) * pageSize + 1;
   const endItem = Math.min(page * pageSize, total);
+  const startItem = total > 0 ? Math.min((page - 1) * pageSize + 1, endItem) : 0;
 
   const handlePageChange = (newPage: number) => {
     if (newPage >= 1 && newPage <= totalPages) {
