@@ -18,13 +18,22 @@ export const ExampleStep1: React.FC = () => {
     register,
     handleSubmit,
     formState: { errors: formErrors },
+    watch,
   } = useForm<Step1Data>({
     resolver: zodResolver(step1Schema),
+    mode: 'onChange',
     defaultValues: {
       name: data.name || '',
       email: data.email || '',
     },
   });
+
+  React.useEffect(() => {
+    const subscription = watch(values => {
+      updateData(values);
+    });
+    return () => subscription.unsubscribe();
+  }, [watch, updateData]);
 
   const onSubmit = (formData: Step1Data) => {
     updateData(formData);
@@ -82,13 +91,25 @@ export const ExampleStep2: React.FC = () => {
     register,
     handleSubmit,
     formState: { errors: formErrors },
+    watch,
   } = useForm<Step2Data>({
     resolver: zodResolver(step2Schema),
+    mode: 'onChange',
     defaultValues: {
-      age: data.age || '',
+      age: typeof data.age === 'number' ? data.age : (undefined as unknown as number),
       occupation: data.occupation || '',
     },
   });
+
+  React.useEffect(() => {
+    const subscription = watch(values => {
+      updateData({
+        ...values,
+        age: Number.isNaN(values.age) ? undefined : values.age,
+      });
+    });
+    return () => subscription.unsubscribe();
+  }, [watch, updateData]);
 
   const onSubmit = (formData: Step2Data) => {
     updateData(formData);

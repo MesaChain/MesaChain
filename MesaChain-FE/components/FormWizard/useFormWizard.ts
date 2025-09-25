@@ -1,4 +1,5 @@
 import { useState, useCallback, useMemo } from 'react';
+import { useEffect } from 'react';
 import { WizardStep, FormWizardContextValue } from '../../types/formWizard';
 
 export const useFormWizard = (
@@ -15,6 +16,19 @@ export const useFormWizard = (
   const filteredSteps = useMemo(() => {
     return steps.filter(step => !step.condition || step.condition(data));
   }, [steps, data]);
+
+  useEffect(() => {
+    if (filteredSteps.length === 0) {
+      if (currentStep !== 0) {
+        setCurrentStep(0);
+      }
+      return;
+    }
+
+    if (currentStep >= filteredSteps.length) {
+      setCurrentStep(filteredSteps.length - 1);
+    }
+  }, [filteredSteps, currentStep]);
 
   const isFirstStep = currentStep === 0;
   const isLastStep = currentStep === filteredSteps.length - 1;

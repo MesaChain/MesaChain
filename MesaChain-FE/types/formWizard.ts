@@ -1,9 +1,10 @@
+import type { ComponentType, Dispatch, SetStateAction } from 'react';
 import { z } from 'zod';
 
 export interface WizardStep {
   id: string;
   title: string;
-  component: React.ComponentType<any>;
+  component: ComponentType<any>;
   validationSchema?: z.ZodSchema;
   condition?: (data: Record<string, any>) => boolean;
 }
@@ -28,7 +29,7 @@ export interface FormWizardContextValue {
   canGoNext: boolean;
   canGoPrev: boolean;
   errors: Record<string, any>;
-  setErrors: (errors: Record<string, any>) => void;
+  setErrors: Dispatch<SetStateAction<Record<string, any>>>;
   isLoading: boolean;
-  setIsLoading: (loading: boolean) => void;
+  setIsLoading: Dispatch<SetStateAction<boolean>>;
 }

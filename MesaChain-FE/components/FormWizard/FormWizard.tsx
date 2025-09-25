@@ -25,6 +25,17 @@ export const FormWizard: React.FC<FormWizardProps> = ({
     // Only handle keyboard navigation when the wizard is focused
     if (!isFocused) return;
 
+    const target = event.target as HTMLElement | null;
+    if (
+      target &&
+      (target.tagName === 'INPUT' ||
+        target.tagName === 'TEXTAREA' ||
+        target.tagName === 'SELECT' ||
+        target.isContentEditable)
+    ) {
+      return;
+    }
+
     if (event.key === 'ArrowLeft' && wizard.canGoPrev) {
       event.preventDefault();
       wizard.prevStep();
