@@ -317,7 +317,7 @@ export const LargeDataset: Story = {
 // Server-side Data Table
 export const ServerSideData: Story = {
   args: {
-    data: Promise.resolve(sampleUsers),
+    data: sampleUsers,
     columns: expandedColumns,
     serverSide: true,
     loading: false

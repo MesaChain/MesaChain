@@ -81,7 +81,7 @@ export const TablePagination = ({
         <span className="text-sm text-gray-700">Rows per page:</span>
         <Select value={pageSize.toString()} onValueChange={handlePageSizeChange}>
           <SelectTrigger className="h-8 w-16">
-            <SelectValue />
+            <SelectValue placeholder="25" />
           </SelectTrigger>
           <SelectContent>
             {pageSizeOptions.map((size) => (

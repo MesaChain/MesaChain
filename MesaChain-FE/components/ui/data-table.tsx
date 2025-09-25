@@ -15,8 +15,8 @@ export const DataTable = <T extends Record<string, any>>({
   serverSide = false,
   selectable = false,
   expandable = false,
-  loading = false,
-  error = null,
+  loading,
+  error,
   onSortChange,
   onFilterChange,
   onPageChange,
@@ -80,13 +80,19 @@ export const DataTable = <T extends Record<string, any>>({
   });
 
   // Use external loading/error states if provided
-  const isLoading = loading !== undefined ? loading : internalLoading;
-  const tableError = error !== null ? error : internalError;
+  const isLoading = loading ?? internalLoading;
+  const tableError = error ?? internalError;
 
   // Handle external event callbacks
   const handleSort = (field: string) => {
+    const next =
+      !sortConfig || sortConfig.field !== field
+        ? { field, direction: 'asc' as const }
+        : sortConfig.direction === 'asc'
+        ? { field, direction: 'desc' as const }
+        : null;
     setSort(field);
-    onSortChange?.(sortConfig || { field, direction: 'asc' });
+    onSortChange?.(next);
   };
 
   const handleFilter = (field: string, value: any, operator?: any) => {
@@ -115,10 +121,14 @@ export const DataTable = <T extends Record<string, any>>({
   };
 
   const handleRowSelect = (row: T) => {
+    const idx = processedData.findIndex(r => r === row);
+    const key = getRowKey(row, idx >= 0 ? idx : 0, rowKey);
     toggleRowSelection(row);
-    // Update external selection callback
-    const newSelection = selection.selectedRowIds.has(getRowKey(row, 0, rowKey))
-      ? selection.selectedRows.filter(r => getRowKey(r, 0, rowKey) !== getRowKey(row, 0, rowKey))
+    const newSelection = selection.selectedRowIds.has(key)
+      ? selection.selectedRows.filter(r => {
+          const rIdx = processedData.findIndex(x => x === r);
+          return getRowKey(r, rIdx >= 0 ? rIdx : 0, rowKey) !== key;
+        })
       : [...selection.selectedRows, row];
     onRowSelect?.(newSelection);
   };
