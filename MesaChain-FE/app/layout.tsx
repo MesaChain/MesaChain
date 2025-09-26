@@ -7,6 +7,7 @@ import "./globals.css";
 import { NotificationProvider } from "@/contexts/NotificationContext";
 import NotificatonUI from "@/components/notification/NotificatonUI";
 
+
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {

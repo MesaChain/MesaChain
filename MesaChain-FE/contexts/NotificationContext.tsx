@@ -142,6 +142,7 @@ export function NotificationProvider({
         ws.current?.close();
       };
     }
+    return undefined;
   }, [enableWebSocket, webSocketUrl]);
 
   const generateId = () => `notification-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
@@ -179,7 +180,7 @@ export function NotificationProvider({
 
     // Limit visible notifications
     setTimeout(() => {
-      const visibleNotifications = state.notifications.slice(0, maxVisible);
+    //   const visibleNotifications = state.notifications.slice(0, maxVisible);
       const hiddenNotifications = state.notifications.slice(maxVisible);
       
       hiddenNotifications.forEach(n => {
