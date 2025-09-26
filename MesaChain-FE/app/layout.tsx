@@ -4,6 +4,8 @@ import { Toaster } from "react-hot-toast";
 import Providers from "../components/providers/QueryClientProvider";
 import AuthWrapper from "../components/auth/AuthWrapper";
 import "./globals.css";
+import { NotificationProvider } from "@/contexts/NotificationContext";
+import NotificatonUI from "@/components/notification/NotificatonUI";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -20,11 +22,18 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={`${inter.className} overflow-x-hidden`}>
-        <Providers>
-          <AuthWrapper>
-            {children}
-          </AuthWrapper>
-        </Providers>
+        <NotificationProvider
+          storageKey="demo-notifications"
+          maxVisible={5}
+          enableWebSocket={false}
+        >
+          <Providers>
+            <AuthWrapper>
+              {children}
+            </AuthWrapper>
+          </Providers>
+        <NotificatonUI />
+        </NotificationProvider>
         <Toaster position="top-right" />
       </body>
     </html>
