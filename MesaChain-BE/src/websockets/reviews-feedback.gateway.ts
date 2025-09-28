@@ -24,7 +24,7 @@ export class ReviewsFeedbackGateway
   server: Server;
 
   private readonly logger = new Logger(ReviewsFeedbackGateway.name);
-  private connectedClients = new Map<string, { socket: Socket; userId?: string }>();
+  private connectedClients = new Map<string, { socket: Socket; userId?: string; role?: string }>();
 
   constructor(private readonly jwtService: JwtService) {}
 
@@ -40,13 +40,18 @@ export class ReviewsFeedbackGateway
       // Verify JWT token
       const payload = this.jwtService.verify(token);
       const userId = payload.sub || payload.userId;
+      const role = payload.role;
 
       if (!userId) {
         throw new UnauthorizedException('Invalid token payload');
       }
 
-      this.logger.log(`Client connected: ${client.id} (User: ${userId})`);
-      this.connectedClients.set(client.id, { socket: client, userId });
+      if (!role) {
+        throw new UnauthorizedException('Invalid token payload - missing role');
+      }
+
+      this.logger.log(`Client connected: ${client.id} (User: ${userId}, Role: ${role})`);
+      this.connectedClients.set(client.id, { socket: client, userId, role });
     } catch (error) {
       this.logger.error(`Authentication failed for client ${client.id}:`, error.message);
       client.emit('auth-error', { message: 'Authentication failed' });
@@ -71,6 +76,13 @@ export class ReviewsFeedbackGateway
     }
 
     const { room } = data;
+    
+    // Restrict global feedback room to staff roles only
+    const allowedStaffRoles = ['STAFF', 'ADMIN', 'MODERATOR'];
+    if (room === 'feedback' && !allowedStaffRoles.includes(clientData.role)) {
+      client.emit('error', { message: 'Unauthorized: Feedback stream restricted to staff' });
+      return;
+    }
     
     // Validate room access based on authenticated user
     if (room.startsWith('reviews:user:') && !room.endsWith(`:${clientData.userId}`)) {
@@ -147,6 +159,13 @@ export class ReviewsFeedbackGateway
 
     const { userId, assignedTo } = data;
     let room = 'feedback';
+    
+    // Restrict global feedback room to staff roles only
+    const allowedStaffRoles = ['STAFF', 'ADMIN', 'MODERATOR'];
+    if (!userId && !assignedTo && !allowedStaffRoles.includes(clientData.role)) {
+      client.emit('error', { message: 'Unauthorized: Feedback stream restricted to staff' });
+      return;
+    }
     
     if (userId) {
       // Only allow users to subscribe to their own feedback

@@ -34,6 +34,11 @@
       "key": "order_id",
       "value": "",
       "type": "string"
+    },
+    {
+      "key": "user_id",
+      "value": "",
+      "type": "string"
     }
   ],
   "item": [
@@ -93,7 +98,23 @@
               "host": ["{{base_url}}"],
               "path": ["auth", "register"]
             }
-          }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if ([200, 201].includes(pm.response.code)) {",
+                  "    const body = pm.response.json();",
+                  "    const userId = body?.id ?? body?.user?.id;",
+                  "    if (userId) {",
+                  "        pm.collectionVariables.set('user_id', userId);",
+                  "    }",
+                  "}"
+                ]
+              }
+            }
+          ]
         }
       ]
     },
@@ -312,7 +333,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"userId\": \"user-id-here\",\n  \"status\": \"completed\",\n  \"total\": 25.99\n}"
+              "raw": "{\n  \"userId\": \"{{user_id}}\",\n  \"status\": \"completed\",\n  \"total\": 25.99\n}"
             },
             "url": {
               "raw": "{{base_url}}/orders",
