@@ -25,6 +25,9 @@ export interface MenuItem {
   // Table Layout Types
   export * from './tableLayout';
   
+  // Gallery Types
+  export * from './gallery';
+
   // utils/
   export type TokenTransaction = {
     id: string
