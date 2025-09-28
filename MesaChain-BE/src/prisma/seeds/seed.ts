@@ -144,12 +144,7 @@ async function main() {
   // Create sample orders
   const order1 = await prisma.order.create({
     data: {
-      orderNumber: "ORD-001",
-      staffId: staff1.id,
-      customerName: "Juan Pérez",
-      customerEmail: "juan@example.com",
-      subtotal: 19.98,
-      tax: 1.99,
+      userId: staff1.id,
       total: 21.97,
       status: "PENDING",
       items: {
@@ -157,14 +152,12 @@ async function main() {
           {
             menuItemId: items[0].id, // Hamburguesa
             quantity: 1,
-            unitPrice: Number(items[0].price),
-            totalPrice: Number(items[0].price),
+            price: items[0].price,
           },
           {
             menuItemId: items[4].id, // Tiramisú
             quantity: 1,
-            unitPrice: Number(items[4].price),
-            totalPrice: Number(items[4].price),
+            price: items[4].price,
           },
         ],
       },
@@ -173,12 +166,7 @@ async function main() {
 
   const order2 = await prisma.order.create({
     data: {
-      orderNumber: "ORD-002",
-      staffId: staff2.id,
-      customerName: "María García",
-      customerEmail: "maria@example.com",
-      subtotal: 20.98,
-      tax: 2.09,
+      userId: staff2.id,
       total: 23.07,
       status: "COMPLETED",
       items: {
@@ -186,14 +174,12 @@ async function main() {
           {
             menuItemId: items[1].id, // Pizza
             quantity: 1,
-            unitPrice: Number(items[1].price),
-            totalPrice: Number(items[1].price),
+            price: items[1].price,
           },
           {
             menuItemId: items[6].id, // Café
             quantity: 2,
-            unitPrice: Number(items[6].price),
-            totalPrice: Number(items[6].price) * 2,
+            price: items[6].price,
           },
         ],
       },
@@ -202,12 +188,7 @@ async function main() {
 
   const order3 = await prisma.order.create({
     data: {
-      orderNumber: "ORD-003",
-      staffId: staff1.id,
-      customerName: "Carlos López",
-      customerEmail: "carlos@example.com",
-      subtotal: 14.99,
-      tax: 1.50,
+      userId: staff1.id,
       total: 16.49,
       status: "PENDING",
       items: {
@@ -215,8 +196,7 @@ async function main() {
           {
             menuItemId: items[3].id, // Pasta
             quantity: 1,
-            unitPrice: Number(items[3].price),
-            totalPrice: Number(items[3].price),
+            price: items[3].price,
           },
         ],
       },

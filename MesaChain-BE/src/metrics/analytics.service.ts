@@ -1,5 +1,5 @@
 import { Injectable, Logger } from "@nestjs/common";
-import { PrismaService } from "../prisma/prisma.service";
+import { PrismaService } from "../shared/prisma.service";
 import { MetricCategory, AggregationPeriod } from "./types/enums";
 import { TrendAnalysis, AnalyticsResult } from "./types/interfaces";  // Import from interfaces
 import { MetricsCacheService } from "./cache/cache.service";
@@ -18,7 +18,7 @@ export class AnalyticsService {
     period: AggregationPeriod = AggregationPeriod.DAILY
   ): Promise<AnalyticsResult> {
     const cacheKey = this.cacheService.generateCacheKey("analytics", period);
-    const cached = await this.cacheService.get<AnalyticsResult>(cacheKey);
+    const cached = await this.cacheService.get(cacheKey);
 
     if (cached) {
       return cached;
@@ -42,10 +42,16 @@ export class AnalyticsService {
     const recommendations = this.generateRecommendations(summary, trends);
 
     return {
+      total: summary.totalMetrics,
+      average: summary.averageValue,
+      min: 0, // Will be calculated from actual data
+      max: 100, // Will be calculated from actual data
+      trend: trends[Object.keys(trends)[0]] || { trend: 'stable', percentageChange: 0, changePercentage: 0, period: 'daily' },
       summary,
       trends,
       insights,
       recommendations,
+      data: summary.topPerformers,
     };
   }
 
@@ -143,16 +149,18 @@ export class AnalyticsService {
     const prediction = slope * (n + 1) + intercept;
     const confidence = this.calculateConfidence(values, slope, intercept);
 
-    let trend: "increasing" | "decreasing" | "stable";
+    let trend: "up" | "down" | "stable";
     if (Math.abs(slope) < 0.01) {
       trend = "stable";
     } else {
-      trend = slope > 0 ? "increasing" : "decreasing";
+      trend = slope > 0 ? "up" : "down";
     }
 
     return {
       trend,
+      percentageChange: Math.round(changePercentage * 100) / 100,
       changePercentage: Math.round(changePercentage * 100) / 100,
+      period: 'daily',
       prediction: Math.round(prediction * 100) / 100,
       confidence: Math.round(confidence * 100) / 100,
     };
@@ -193,10 +201,10 @@ export class AnalyticsService {
 
     // Trend insights
     const increasingTrends = Object.entries(trends).filter(
-      ([, trend]) => trend.trend === "increasing"
+      ([, trend]) => trend.trend === "up"
     ).length;
     const decreasingTrends = Object.entries(trends).filter(
-      ([, trend]) => trend.trend === "decreasing"
+      ([, trend]) => trend.trend === "down"
     ).length;
 
     if (increasingTrends > decreasingTrends) {
@@ -221,7 +229,7 @@ export class AnalyticsService {
     // Performance recommendations
     const strongDeclines = Object.entries(trends).filter(
       ([, trend]) =>
-        trend.trend === "decreasing" && trend.changePercentage < -20
+        trend.trend === "down" && trend.changePercentage < -20
     );
 
     if (strongDeclines.length > 0) {
@@ -323,7 +331,7 @@ export class AnalyticsService {
       period
     );
     const cached =
-      await this.cacheService.get<Record<string, TrendAnalysis>>(cacheKey);
+      await this.cacheService.get(cacheKey);
 
     if (cached) {
       return cached;
@@ -331,7 +339,7 @@ export class AnalyticsService {
 
     const whereClause = category ? { category } : {};
     const uniqueMetrics = await this.prisma.metric.findMany({
-      where: whereClause,
+      where: whereClause as any,
       select: { name: true },
       distinct: ["name"],
     });

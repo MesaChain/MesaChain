@@ -1,5 +1,5 @@
 import { Injectable, Logger } from "@nestjs/common";
-import { PrismaService } from "../prisma/prisma.service";
+import { PrismaService } from "../shared/prisma.service";
 import { AggregationPeriod } from "./types/enums";
 import { Cron, CronExpression } from "@nestjs/schedule";
 
@@ -199,32 +199,32 @@ export class MetricsAggregationService {
     return { startTime, endTime };
   }
 
-  @Cron(CronExpression.EVERY_HOUR)
+  // @Cron(CronExpression.EVERY_HOUR)
   async hourlyAggregation() {
     await this.aggregateMetrics(AggregationPeriod.HOURLY);
   }
 
-  @Cron(CronExpression.EVERY_DAY_AT_MIDNIGHT)
+  // @Cron(CronExpression.EVERY_DAY_AT_MIDNIGHT)
   async dailyAggregation() {
     await this.aggregateMetrics(AggregationPeriod.DAILY);
   }
 
-  @Cron("0 0 * * 1") // Every Monday at midnight
+  // @Cron("0 0 * * 1") // Every Monday at midnight
   async weeklyAggregation() {
     await this.aggregateMetrics(AggregationPeriod.WEEKLY);
   }
 
-  @Cron("0 0 1 * *") // First day of every month at midnight
+  // @Cron("0 0 1 * *") // First day of every month at midnight
   async monthlyAggregation() {
     await this.aggregateMetrics(AggregationPeriod.MONTHLY);
   }
 
-  @Cron("0 0 1 1,4,7,10 *") // First day of quarters
+  // @Cron("0 0 1 1,4,7,10 *") // First day of quarters
   async quarterlyAggregation() {
     await this.aggregateMetrics(AggregationPeriod.QUARTERLY);
   }
 
-  @Cron("0 0 1 1 *") // January 1st at midnight
+  // @Cron("0 0 1 1 *") // January 1st at midnight
   async yearlyAggregation() {
     await this.aggregateMetrics(AggregationPeriod.YEARLY);
   }

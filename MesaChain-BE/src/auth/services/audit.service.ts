@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { PrismaService } from '../../prisma/prisma.service';
+import { PrismaService } from '../../shared/prisma.service';
 import { UserRole } from '../../interfaces/user.interface';
 
 export interface AuditLogEntry {

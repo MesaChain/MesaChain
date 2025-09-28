@@ -5,10 +5,9 @@ import {
   MessageBody,
   ConnectedSocket,
 } from "@nestjs/websockets";
-import { Inject, forwardRef } from "@nestjs/common";
+import { UseGuards, Inject, forwardRef } from "@nestjs/common";
 import { Server, Socket } from "socket.io";
 import { ReservationsService } from "./reservations.service";
-import { UseGuards, Inject, forwardRef } from "@nestjs/common";
 import { JwtService } from "@nestjs/jwt";
 import { WsException } from "@nestjs/websockets";
 

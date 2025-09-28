@@ -38,10 +38,10 @@ export class OrderQueryDto {
   @IsDateString()
   endDate?: string;
 
-  @ApiPropertyOptional({ description: 'Filter by staff ID', example: 'uuid-string' })
+  @ApiPropertyOptional({ description: 'Filter by user ID', example: 'uuid-string' })
   @IsOptional()
   @IsUUID()
-  staffId?: string;
+  userId?: string;
 
   @ApiPropertyOptional({ description: 'Search in order number or customer name', example: 'john' })
   @IsOptional()

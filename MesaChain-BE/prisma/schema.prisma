@@ -9,6 +9,7 @@ enum TokenTransactionType {
 
 generator client {
   provider = "prisma-client-js"
+  output   = "../node_modules/.prisma/client"
 }
 
 datasource db {
@@ -108,6 +109,14 @@ model User {
   reports       Report[]
   loyaltyToken LoyaltyToken?
   rewardRedemptions RewardRedemption[]
+  
+  // Review and Feedback Relations
+  reviews                Review[]
+  reviewHelpfulVotes     ReviewHelpfulVote[]
+  reviewReports          ReviewReport[] @relation("ReportedByUser")
+  feedback               Feedback[] @relation("CreatedByUser")
+  feedbackResponses      FeedbackResponse[]
+  moderatedReviews       ReviewModerationHistory[] @relation("ModeratedByUser")
 }
 
 model LoyaltyToken {
@@ -254,6 +263,9 @@ model MenuItem {
   createdAt   DateTime      @default(now())
   updatedAt   DateTime      @updatedAt
   orderItems  OrderItem[]
+  
+  // Review Relations
+  reviews Review[]
 }
 
 model Order {
@@ -266,6 +278,10 @@ model Order {
   user          User                 @relation(fields: [userId], references: [id])
   items         OrderItem[]
   statusHistory OrderStatusHistory[]
+  
+  // Review and Feedback Relations
+  reviews   Review[]
+  feedback  Feedback[]
 }
 
 model OrderItem {
@@ -383,4 +399,238 @@ model MetricSnapshot {
   @@index([category, timestamp])
   @@index([retentionDate])
   @@map("metric_snapshots")
+}
+
+// Review and Feedback System Enums
+enum ReviewStatus {
+  pending
+  approved
+  rejected
+  flagged
+}
+
+enum FeedbackStatus {
+  open
+  in_progress
+  resolved
+  closed
+}
+
+enum FeedbackPriority {
+  low
+  medium
+  high
+  urgent
+}
+
+enum FeedbackCategory {
+  service
+  food_quality
+  ambiance
+  pricing
+  staff
+  general
+}
+
+enum ReviewType {
+  product
+  service
+  overall
+}
+
+enum ModerationAction {
+  approve
+  reject
+  flag
+  edit
+}
+
+// Review System Models
+model Review {
+  id                String      @id @default(uuid())
+  userId            String      @map("user_id")
+  orderId           String?     @map("order_id")
+  menuItemId        String?     @map("menu_item_id")
+  rating            Int         @db.SmallInt
+  content           String?
+  status            ReviewStatus @default(pending)
+  helpfulVotesCount Int         @default(0) @map("helpful_votes_count")
+  totalVotesCount   Int         @default(0) @map("total_votes_count")
+  isVerified        Boolean     @default(false) @map("is_verified")
+  isAnonymous       Boolean     @default(false) @map("is_anonymous")
+  moderationNotes   String?     @map("moderation_notes")
+  createdAt         DateTime    @default(now()) @map("created_at")
+  updatedAt         DateTime    @updatedAt @map("updated_at")
+
+  // Relations
+  user              User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  order             Order?      @relation(fields: [orderId], references: [id], onDelete: SetNull)
+  menuItem          MenuItem?   @relation(fields: [menuItemId], references: [id], onDelete: SetNull)
+  helpfulVotes      ReviewHelpfulVote[]
+  reports           ReviewReport[]
+  moderationHistory ReviewModerationHistory[]
+
+  @@index([userId])
+  @@index([orderId])
+  @@index([menuItemId])
+  @@index([status])
+  @@index([rating])
+  @@index([createdAt])
+  @@map("reviews")
+}
+
+model ReviewHelpfulVote {
+  id        String   @id @default(uuid())
+  reviewId  String   @map("review_id")
+  userId    String   @map("user_id")
+  isHelpful Boolean  @map("is_helpful")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  // Relations
+  review Review @relation(fields: [reviewId], references: [id], onDelete: Cascade)
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([reviewId, userId])
+  @@index([reviewId])
+  @@index([userId])
+  @@map("review_helpful_votes")
+}
+
+model ReviewReport {
+  id          String   @id @default(uuid())
+  reviewId    String   @map("review_id")
+  userId      String   @map("user_id")
+  reason      String
+  description String?
+  status      String   @default("pending")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  // Relations
+  review Review @relation(fields: [reviewId], references: [id], onDelete: Cascade)
+  user   User   @relation("ReportedByUser", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([reviewId])
+  @@index([userId])
+  @@index([status])
+  @@map("review_reports")
+}
+
+model ReviewModerationHistory {
+  id          String          @id @default(uuid())
+  reviewId    String          @map("review_id")
+  moderatorId String          @map("moderator_id")
+  action      ModerationAction
+  reason      String?
+  notes       String?
+  createdAt   DateTime        @default(now()) @map("created_at")
+
+  // Relations
+  review    Review @relation(fields: [reviewId], references: [id], onDelete: Cascade)
+  moderator User   @relation("ModeratedByUser", fields: [moderatorId], references: [id], onDelete: Cascade)
+
+  @@index([reviewId])
+  @@index([moderatorId])
+  @@index([createdAt])
+  @@map("review_moderation_history")
+}
+
+// Feedback System Models
+model Feedback {
+  id          String           @id @default(uuid())
+  userId      String           @map("user_id")
+  orderId     String?          @map("order_id")
+  category    FeedbackCategory
+  priority    FeedbackPriority @default(medium)
+  status      FeedbackStatus   @default(open)
+  subject     String
+  message     String
+  attachments String?
+  createdAt   DateTime         @default(now()) @map("created_at")
+  updatedAt   DateTime         @updatedAt @map("updated_at")
+
+  // Relations
+  user      User              @relation("CreatedByUser", fields: [userId], references: [id], onDelete: Cascade)
+  order     Order?            @relation(fields: [orderId], references: [id], onDelete: SetNull)
+  responses FeedbackResponse[]
+  history   FeedbackHistory[]
+
+  @@index([userId])
+  @@index([orderId])
+  @@index([category])
+  @@index([priority])
+  @@index([status])
+  @@index([createdAt])
+  @@map("feedback")
+}
+
+model FeedbackResponse {
+  id         String   @id @default(uuid())
+  feedbackId String   @map("feedback_id")
+  userId     String   @map("user_id")
+  message    String
+  isInternal Boolean  @default(false) @map("is_internal")
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  // Relations
+  feedback Feedback @relation(fields: [feedbackId], references: [id], onDelete: Cascade)
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([feedbackId])
+  @@index([userId])
+  @@index([createdAt])
+  @@map("feedback_responses")
+}
+
+model FeedbackHistory {
+  id          String   @id @default(uuid())
+  feedbackId String   @map("feedback_id")
+  field       String
+  oldValue    String?  @map("old_value")
+  newValue    String?  @map("new_value")
+  changedBy   String   @map("changed_by")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  // Relations
+  feedback Feedback @relation(fields: [feedbackId], references: [id], onDelete: Cascade)
+
+  @@index([feedbackId])
+  @@index([changedBy])
+  @@index([createdAt])
+  @@map("feedback_history")
+}
+
+// Analytics Models
+model ReviewAnalytics {
+  id              String   @id @default(uuid())
+  menuItemId      String?  @map("menu_item_id")
+  totalReviews    Int      @default(0) @map("total_reviews")
+  averageRating   Decimal  @default(0) @map("average_rating") @db.Decimal(3, 2)
+  ratingDistribution Json   @default("{}") @map("rating_distribution")
+  helpfulnessScore Decimal @default(0) @map("helpfulness_score") @db.Decimal(3, 2)
+  period          String
+  startDate       DateTime @map("start_date")
+  endDate         DateTime @map("end_date")
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  @@index([menuItemId])
+  @@index([period])
+  @@index([startDate, endDate])
+  @@map("review_analytics")
+}
+
+model FeedbackAnalytics {
+  id              String   @id @default(uuid())
+  category        FeedbackCategory
+  totalFeedback   Int      @default(0) @map("total_feedback")
+  resolvedCount   Int      @default(0) @map("resolved_count")
+  averageResolutionTime Int @default(0) @map("average_resolution_time")
+  period          String
+  startDate       DateTime @map("start_date")
+  endDate         DateTime @map("end_date")
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  @@index([category])
+  @@index([period])
+  @@index([startDate, endDate])
+  @@map("feedback_analytics")
 }

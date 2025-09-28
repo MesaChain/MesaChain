@@ -66,9 +66,8 @@ export class AuthService {
   }
 
   async logout(userId: string) {
-    await this.prisma.session.updateMany({
+    await this.prisma.session.deleteMany({
       where: { userId },
-      data: { revoked: true },
     });
   }
 
@@ -80,7 +79,6 @@ export class AuthService {
 
     if (
       !refreshToken ||
-      refreshToken.revoked ||
       refreshToken.expiresAt < new Date()
     ) {
       throw new UnauthorizedException("Invalid refresh token");
@@ -91,9 +89,8 @@ export class AuthService {
       refreshToken.user.email
     );
     await this.saveRefreshToken(refreshToken.user.id, tokens.refreshToken);
-    await this.prisma.session.update({
+    await this.prisma.session.delete({
       where: { id: refreshToken.id },
-      data: { revoked: true },
     });
 
     return tokens;
