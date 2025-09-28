@@ -64,6 +64,8 @@
     <script>
         let socket = null;
         let isConnected = false;
+        let currentReviewRoom = 'reviews';
+        let currentFeedbackRoom = 'feedback';
 
         function log(message) {
             const logDiv = document.getElementById('log');
@@ -107,6 +109,7 @@
                 isConnected = false;
                 updateStatus(false);
                 log('Disconnected from WebSocket server');
+                socket = null;
             });
 
             socket.on('connect_error', (error) => {
@@ -193,6 +196,14 @@
             const menuItemId = document.getElementById('menuItemId').value;
             const userId = document.getElementById('userId').value;
             
+            let room = 'reviews';
+            if (menuItemId) {
+                room = `reviews:menu:${menuItemId}`;
+            } else if (userId) {
+                room = `reviews:user:${userId}`;
+            }
+            currentReviewRoom = room;
+            
             socket.emit('subscribe-reviews', {
                 menuItemId: menuItemId || undefined,
                 userId: userId || undefined
@@ -205,7 +216,7 @@
                 return;
             }
 
-            socket.emit('leave-room', { room: 'reviews' });
+            socket.emit('leave-room', { room: currentReviewRoom });
         }
 
         function subscribeFeedback() {
@@ -216,6 +227,14 @@
 
             const userId = document.getElementById('feedbackUserId').value;
             const assignedTo = document.getElementById('assignedTo').value;
+            
+            let room = 'feedback';
+            if (userId) {
+                room = `feedback:user:${userId}`;
+            } else if (assignedTo) {
+                room = `feedback:assigned:${assignedTo}`;
+            }
+            currentFeedbackRoom = room;
             
             socket.emit('subscribe-feedback', {
                 userId: userId || undefined,
@@ -229,7 +248,7 @@
                 return;
             }
 
-            socket.emit('leave-room', { room: 'feedback' });
+            socket.emit('leave-room', { room: currentFeedbackRoom });
         }
 
         function testNewReview() {

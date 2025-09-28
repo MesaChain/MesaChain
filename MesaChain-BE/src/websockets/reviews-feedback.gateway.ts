@@ -8,7 +8,8 @@ import {
   OnGatewayDisconnect,
 } from '@nestjs/websockets';
 import { Server, Socket } from 'socket.io';
-import { Logger } from '@nestjs/common';
+import { Logger, UnauthorizedException, ForbiddenException } from '@nestjs/common';
+import { JwtService } from '@nestjs/jwt';
 
 @WebSocketGateway({
   cors: {
@@ -25,9 +26,32 @@ export class ReviewsFeedbackGateway
   private readonly logger = new Logger(ReviewsFeedbackGateway.name);
   private connectedClients = new Map<string, { socket: Socket; userId?: string }>();
 
-  handleConnection(client: Socket) {
-    this.logger.log(`Client connected: ${client.id}`);
-    this.connectedClients.set(client.id, { socket: client });
+  constructor(private readonly jwtService: JwtService) {}
+
+  async handleConnection(client: Socket) {
+    try {
+      // Extract token from handshake
+      const token = client.handshake.auth?.token || client.handshake.headers?.authorization?.replace('Bearer ', '');
+      
+      if (!token) {
+        throw new UnauthorizedException('No authentication token provided');
+      }
+
+      // Verify JWT token
+      const payload = this.jwtService.verify(token);
+      const userId = payload.sub || payload.userId;
+
+      if (!userId) {
+        throw new UnauthorizedException('Invalid token payload');
+      }
+
+      this.logger.log(`Client connected: ${client.id} (User: ${userId})`);
+      this.connectedClients.set(client.id, { socket: client, userId });
+    } catch (error) {
+      this.logger.error(`Authentication failed for client ${client.id}:`, error.message);
+      client.emit('auth-error', { message: 'Authentication failed' });
+      client.disconnect();
+    }
   }
 
   handleDisconnect(client: Socket) {
@@ -71,17 +95,28 @@ export class ReviewsFeedbackGateway
     @MessageBody() data: { menuItemId?: string; userId?: string },
     @ConnectedSocket() client: Socket,
   ) {
+    const clientData = this.connectedClients.get(client.id);
+    if (!clientData?.userId) {
+      client.emit('error', { message: 'Authentication required' });
+      return;
+    }
+
     const { menuItemId, userId } = data;
     let room = 'reviews';
     
     if (menuItemId) {
       room = `reviews:menu:${menuItemId}`;
     } else if (userId) {
+      // Only allow users to subscribe to their own reviews
+      if (userId !== clientData.userId) {
+        client.emit('error', { message: 'Unauthorized: Cannot subscribe to other users\' reviews' });
+        return;
+      }
       room = `reviews:user:${userId}`;
     }
     
     client.join(room);
-    this.logger.log(`Client ${client.id} subscribed to reviews: ${room}`);
+    this.logger.log(`Client ${client.id} (User: ${clientData.userId}) subscribed to reviews: ${room}`);
     client.emit('subscribed-reviews', { room, success: true });
   }
 
@@ -90,17 +125,33 @@ export class ReviewsFeedbackGateway
     @MessageBody() data: { userId?: string; assignedTo?: string },
     @ConnectedSocket() client: Socket,
   ) {
+    const clientData = this.connectedClients.get(client.id);
+    if (!clientData?.userId) {
+      client.emit('error', { message: 'Authentication required' });
+      return;
+    }
+
     const { userId, assignedTo } = data;
     let room = 'feedback';
     
     if (userId) {
+      // Only allow users to subscribe to their own feedback
+      if (userId !== clientData.userId) {
+        client.emit('error', { message: 'Unauthorized: Cannot subscribe to other users\' feedback' });
+        return;
+      }
       room = `feedback:user:${userId}`;
     } else if (assignedTo) {
+      // Only allow users to subscribe to feedback assigned to them
+      if (assignedTo !== clientData.userId) {
+        client.emit('error', { message: 'Unauthorized: Cannot subscribe to feedback assigned to others' });
+        return;
+      }
       room = `feedback:assigned:${assignedTo}`;
     }
     
     client.join(room);
-    this.logger.log(`Client ${client.id} subscribed to feedback: ${room}`);
+    this.logger.log(`Client ${client.id} (User: ${clientData.userId}) subscribed to feedback: ${room}`);
     client.emit('subscribed-feedback', { room, success: true });
   }
 

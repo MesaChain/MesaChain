@@ -89,7 +89,7 @@ export class AuthService {
       refreshToken.user.email
     );
     await this.saveRefreshToken(refreshToken.user.id, tokens.refreshToken);
-    await this.prisma.session.delete({
+    await this.prisma.session.deleteMany({
       where: { id: refreshToken.id },
     });
 

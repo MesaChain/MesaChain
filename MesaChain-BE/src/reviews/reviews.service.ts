@@ -29,6 +29,11 @@ export class ReviewsService {
         throw new NotFoundException('Order not found');
       }
 
+      // Verify order ownership
+      if (order.userId !== userId) {
+        throw new ForbiddenException('You can only review your own orders');
+      }
+
       // Check if user already reviewed this order
       const existingReview = await this.prismaClient.review.findFirst({
         where: {
@@ -304,12 +309,12 @@ export class ReviewsService {
       throw new ForbiddenException('You can only update your own reviews');
     }
 
+    // Remove status from user updates - only moderators can change status
+    const { status, ...updateData } = updateReviewDto;
+    
     const updated = await this.prismaClient.review.update({
       where: { id },
-      data: {
-        ...updateReviewDto,
-        status: updateReviewDto.status as any
-      },
+      data: updateData,
       include: {
         user: {
           select: {

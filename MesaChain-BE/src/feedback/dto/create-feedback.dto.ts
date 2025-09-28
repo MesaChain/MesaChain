@@ -17,8 +17,9 @@ export enum FeedbackPriority {
 }
 
 export class CreateFeedbackDto {
+  @IsOptional()
   @IsUUID()
-  orderId: string;
+  orderId?: string;
 
   @IsEnum(FeedbackCategory)
   category: FeedbackCategory;

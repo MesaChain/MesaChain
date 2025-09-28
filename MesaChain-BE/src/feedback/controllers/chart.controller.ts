@@ -1,10 +1,19 @@
 import { Controller, Get, Query, UseGuards } from '@nestjs/common';
 import { ChartDataService } from '../services/chart-data.service';
-import { AnalyticsQueryDto } from '../dto/analytics.dto';
+import { AnalyticsQueryDto, AnalyticsPeriod } from '../dto/analytics.dto';
 import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../../auth/guards/roles.guard';
 import { Roles } from '../../auth/decorators/roles.decorator';
 import { UserRole } from '../../interfaces/user.interface';
+
+const SUPPORTED_PERIODS = new Set<AnalyticsPeriod>([
+  AnalyticsPeriod.DAY,
+  AnalyticsPeriod.WEEK,
+  AnalyticsPeriod.MONTH,
+]);
+
+const normalizePeriod = (period?: AnalyticsPeriod) =>
+  period && SUPPORTED_PERIODS.has(period) ? period : AnalyticsPeriod.DAY;
 
 @Controller('charts')
 @UseGuards(JwtAuthGuard, RolesGuard)
@@ -43,9 +52,9 @@ export class ChartController {
   async getTrendChart(@Query() query: AnalyticsQueryDto) {
     const startDate = query.startDate ? new Date(query.startDate) : new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
     const endDate = query.endDate ? new Date(query.endDate) : new Date();
-    const period = (query.period as 'day' | 'week' | 'month') || 'day';
+    const period = normalizePeriod(query.period);
     
-    return await this.chartDataService.getTrendChart(startDate, endDate, period);
+    return await this.chartDataService.getTrendChart(startDate, endDate, period as 'day' | 'week' | 'month');
   }
 
   @Get('moderation-effectiveness')
@@ -80,7 +89,7 @@ export class ChartController {
   async getDashboardCharts(@Query() query: AnalyticsQueryDto) {
     const startDate = query.startDate ? new Date(query.startDate) : new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
     const endDate = query.endDate ? new Date(query.endDate) : new Date();
-    const period = (query.period as 'day' | 'week' | 'month') || 'day';
+    const period = normalizePeriod(query.period);
 
     const [
       categoryDistribution,
@@ -94,7 +103,7 @@ export class ChartController {
       this.chartDataService.getCategoryDistributionChart(startDate, endDate),
       this.chartDataService.getPriorityDistributionChart(startDate, endDate),
       this.chartDataService.getStatusDistributionChart(startDate, endDate),
-      this.chartDataService.getTrendChart(startDate, endDate, period),
+      this.chartDataService.getTrendChart(startDate, endDate, period as 'day' | 'week' | 'month'),
       this.chartDataService.getModerationEffectivenessChart(startDate, endDate),
       this.chartDataService.getResolutionTimeChart(startDate, endDate),
       this.chartDataService.getSatisfactionTrendChart(startDate, endDate)

@@ -137,7 +137,15 @@ export class AnalyticsController {
     ];
 
     const csvContent = [headers, ...rows]
-      .map(row => row.map(cell => `"${cell}"`).join(','))
+      .map(row =>
+        row
+          .map(cell => {
+            const normalized = cell ?? '';
+            const text = String(normalized).replace(/"/g, '""');
+            return `"${text}"`;
+          })
+          .join(',')
+      )
       .join('\n');
 
     return csvContent;
