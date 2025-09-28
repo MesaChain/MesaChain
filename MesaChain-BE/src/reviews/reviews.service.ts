@@ -309,12 +309,33 @@ export class ReviewsService {
       throw new ForbiddenException('You can only update your own reviews');
     }
 
-    // Remove status from user updates - only moderators can change status
-    const { status, ...updateData } = updateReviewDto;
+    // Remove status and moderationNotes from user updates - only moderators can change status and notes
+    const { status: _ignoredStatus, moderationNotes: _ignoredNotes, ...updateData } = updateReviewDto;
+
+    // Create the final update object
+    const finalUpdateData: any = { ...updateData };
+
+    // Re-run AI moderation if content or rating changed
+    if (updateData.content !== undefined || updateData.rating !== undefined) {
+      const moderationResult = await this.aiModerationService.moderateReview(
+        updateData.content ?? existingReview.content ?? '',
+        updateData.rating ?? existingReview.rating,
+      );
+
+      finalUpdateData.status = moderationResult.isApproved ? 'approved' : 'flagged';
+      finalUpdateData.moderationNotes = moderationResult.isApproved
+        ? null
+        : `AI Moderation: ${moderationResult.reasons.join(', ')}`;
+    }
+
+    // Reject if no valid fields remain
+    if (Object.keys(finalUpdateData).length === 0) {
+      throw new BadRequestException('No updatable fields provided');
+    }
     
     const updated = await this.prismaClient.review.update({
       where: { id },
-      data: updateData,
+      data: finalUpdateData,
       include: {
         user: {
           select: {

@@ -1,4 +1,5 @@
-import { Controller, Get, Query, UseGuards } from '@nestjs/common';
+import { Controller, Get, Query, UseGuards, StreamableFile, Res } from '@nestjs/common';
+import type { Response } from 'express';
 import { AnalyticsService } from '../services/analytics.service';
 import { AnalyticsQueryDto, FeedbackAnalyticsDto, ModerationAnalyticsDto, RealTimeMetricsDto } from '../dto/analytics.dto';
 import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
@@ -77,7 +78,10 @@ export class AnalyticsController {
 
   @Get('export')
   @Roles(UserRole.ADMIN, UserRole.MODERATOR)
-  async exportAnalytics(@Query() query: AnalyticsQueryDto) {
+  async exportAnalytics(
+    @Query() query: AnalyticsQueryDto,
+    @Res({ passthrough: true }) res: Response
+  ): Promise<StreamableFile> {
     const startDate = query.startDate ? new Date(query.startDate) : new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
     const endDate = query.endDate ? new Date(query.endDate) : new Date();
     
@@ -90,11 +94,11 @@ export class AnalyticsController {
     // Generate CSV format
     const csvData = this.generateCSV(analytics);
     
-    return {
-      data: csvData,
-      filename: `feedback-analytics-${startDate.toISOString().split('T')[0]}-to-${endDate.toISOString().split('T')[0]}.csv`,
-      contentType: 'text/csv'
-    };
+    const filename = `feedback-analytics-${startDate.toISOString().split('T')[0]}-to-${endDate.toISOString().split('T')[0]}.csv`;
+    res.setHeader('Content-Type', 'text/csv');
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+
+    return new StreamableFile(Buffer.from(csvData, 'utf8'));
   }
 
   private generateCSV(analytics: FeedbackAnalyticsDto): string {

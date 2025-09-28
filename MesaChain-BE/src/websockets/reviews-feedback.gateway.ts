@@ -61,21 +61,35 @@ export class ReviewsFeedbackGateway
 
   @SubscribeMessage('join-room')
   handleJoinRoom(
-    @MessageBody() data: { room: string; userId?: string },
+    @MessageBody() data: { room: string },
     @ConnectedSocket() client: Socket,
   ) {
-    const { room, userId } = data;
-    client.join(room);
-    
-    // Store user ID for this client
-    if (userId) {
-      const clientData = this.connectedClients.get(client.id);
-      if (clientData) {
-        clientData.userId = userId;
-      }
+    const clientData = this.connectedClients.get(client.id);
+    if (!clientData?.userId) {
+      client.emit('error', { message: 'Authentication required' });
+      return;
     }
 
-    this.logger.log(`Client ${client.id} joined room: ${room}`);
+    const { room } = data;
+    
+    // Validate room access based on authenticated user
+    if (room.startsWith('reviews:user:') && !room.endsWith(`:${clientData.userId}`)) {
+      client.emit('error', { message: 'Unauthorized: Cannot join other users\' review rooms' });
+      return;
+    }
+    
+    if (room.startsWith('feedback:user:') && !room.endsWith(`:${clientData.userId}`)) {
+      client.emit('error', { message: 'Unauthorized: Cannot join other users\' feedback rooms' });
+      return;
+    }
+    
+    if (room.startsWith('feedback:assigned:') && !room.endsWith(`:${clientData.userId}`)) {
+      client.emit('error', { message: 'Unauthorized: Cannot join feedback rooms assigned to others' });
+      return;
+    }
+
+    client.join(room);
+    this.logger.log(`Client ${client.id} (User: ${clientData.userId}) joined room: ${room}`);
     client.emit('joined-room', { room, success: true });
   }
 

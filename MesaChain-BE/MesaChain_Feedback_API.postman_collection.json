@@ -1,0 +1,435 @@
+{
+  "info": {
+    "name": "MesaChain Feedback API",
+    "description": "API collection for testing the MesaChain Customer Feedback and Review System",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{jwt_token}}",
+        "type": "string"
+      }
+    ]
+  },
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:3000",
+      "type": "string"
+    },
+    {
+      "key": "jwt_token",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "feedback_id",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "order_id",
+      "value": "",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "Authentication",
+      "item": [
+        {
+          "name": "Login",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"user@example.com\",\n  \"password\": \"password123\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/auth/login",
+              "host": ["{{base_url}}"],
+              "path": ["auth", "login"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    const response = pm.response.json();",
+                  "    pm.collectionVariables.set('jwt_token', response.access_token);",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Register",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"newuser@example.com\",\n  \"password\": \"password123\",\n  \"name\": \"New User\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/auth/register",
+              "host": ["{{base_url}}"],
+              "path": ["auth", "register"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Feedback Management",
+      "item": [
+        {
+          "name": "Create Feedback",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"orderId\": \"{{order_id}}\",\n  \"category\": \"service\",\n  \"priority\": \"medium\",\n  \"subject\": \"Great service!\",\n  \"message\": \"The staff was very helpful and the food was excellent. Highly recommend this restaurant.\",\n  \"isAnonymous\": false,\n  \"contactEmail\": \"customer@example.com\",\n  \"contactPhone\": \"+1234567890\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/feedback",
+              "host": ["{{base_url}}"],
+              "path": ["feedback"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "    const response = pm.response.json();",
+                  "    pm.collectionVariables.set('feedback_id', response.id);",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get All Feedback",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/feedback?page=1&limit=10",
+              "host": ["{{base_url}}"],
+              "path": ["feedback"],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "10"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Feedback by Category",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/feedback?category=service&priority=high",
+              "host": ["{{base_url}}"],
+              "path": ["feedback"],
+              "query": [
+                {
+                  "key": "category",
+                  "value": "service"
+                },
+                {
+                  "key": "priority",
+                  "value": "high"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Search Feedback",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/feedback?search=excellent",
+              "host": ["{{base_url}}"],
+              "path": ["feedback"],
+              "query": [
+                {
+                  "key": "search",
+                  "value": "excellent"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Feedback by ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/feedback/{{feedback_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["feedback", "{{feedback_id}}"]
+            }
+          }
+        },
+        {
+          "name": "Update Feedback",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"in_progress\",\n  \"subject\": \"Updated: Great service!\",\n  \"message\": \"Updated feedback message with more details about the experience.\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/feedback/{{feedback_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["feedback", "{{feedback_id}}"]
+            }
+          }
+        },
+        {
+          "name": "Add Response to Feedback",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"message\": \"Thank you for your feedback! We're glad you enjoyed your experience.\",\n  \"isInternal\": false\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/feedback/{{feedback_id}}/responses",
+              "host": ["{{base_url}}"],
+              "path": ["feedback", "{{feedback_id}}", "responses"]
+            }
+          }
+        },
+        {
+          "name": "Add Internal Response",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"message\": \"Internal note: Customer seems very satisfied. Consider reaching out for a testimonial.\",\n  \"isInternal\": true\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/feedback/{{feedback_id}}/responses",
+              "host": ["{{base_url}}"],
+              "path": ["feedback", "{{feedback_id}}", "responses"]
+            }
+          }
+        },
+        {
+          "name": "Get Feedback Statistics",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/feedback/stats",
+              "host": ["{{base_url}}"],
+              "path": ["feedback", "stats"]
+            }
+          }
+        },
+        {
+          "name": "Delete Feedback",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/feedback/{{feedback_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["feedback", "{{feedback_id}}"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Sample Data Setup",
+      "item": [
+        {
+          "name": "Create Sample Order",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"userId\": \"user-id-here\",\n  \"status\": \"completed\",\n  \"total\": 25.99\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/orders",
+              "host": ["{{base_url}}"],
+              "path": ["orders"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "    const response = pm.response.json();",
+                  "    pm.collectionVariables.set('order_id', response.id);",
+                  "}"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Test Scenarios",
+      "item": [
+        {
+          "name": "Complete Feedback Flow",
+          "item": [
+            {
+              "name": "1. Create Positive Feedback",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"orderId\": \"{{order_id}}\",\n  \"category\": \"food_quality\",\n  \"priority\": \"low\",\n  \"subject\": \"Amazing food!\",\n  \"message\": \"The pasta was absolutely delicious and the service was outstanding. Will definitely come back!\",\n  \"isAnonymous\": false\n}"
+                },
+                "url": {
+                  "raw": "{{base_url}}/feedback",
+                  "host": ["{{base_url}}"],
+                  "path": ["feedback"]
+                }
+              }
+            },
+            {
+              "name": "2. Create Negative Feedback",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"orderId\": \"{{order_id}}\",\n  \"category\": \"service\",\n  \"priority\": \"high\",\n  \"subject\": \"Poor service experience\",\n  \"message\": \"The waiter was rude and the food took over an hour to arrive. Very disappointed with this visit.\",\n  \"isAnonymous\": false,\n  \"contactEmail\": \"complaint@example.com\"\n}"
+                },
+                "url": {
+                  "raw": "{{base_url}}/feedback",
+                  "host": ["{{base_url}}"],
+                  "path": ["feedback"]
+                }
+              }
+            },
+            {
+              "name": "3. Create Anonymous Feedback",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"orderId\": \"{{order_id}}\",\n  \"category\": \"ambiance\",\n  \"priority\": \"medium\",\n  \"subject\": \"Nice atmosphere\",\n  \"message\": \"The restaurant has a lovely ambiance, perfect for a romantic dinner.\",\n  \"isAnonymous\": true\n}"
+                },
+                "url": {
+                  "raw": "{{base_url}}/feedback",
+                  "host": ["{{base_url}}"],
+                  "path": ["feedback"]
+                }
+              }
+            },
+            {
+              "name": "4. Create Urgent Feedback",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"orderId\": \"{{order_id}}\",\n  \"category\": \"staff\",\n  \"priority\": \"urgent\",\n  \"subject\": \"URGENT: Safety concern\",\n  \"message\": \"There was a slip hazard near the entrance that needs immediate attention.\",\n  \"isAnonymous\": false,\n  \"contactPhone\": \"+1234567890\"\n}"
+                },
+                "url": {
+                  "raw": "{{base_url}}/feedback",
+                  "host": ["{{base_url}}"],
+                  "path": ["feedback"]
+                }
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
+
