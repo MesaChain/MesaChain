@@ -13,7 +13,12 @@ import { JwtService } from '@nestjs/jwt';
 
 @WebSocketGateway({
   cors: {
-    origin: '*',
+    origin: process.env.WS_CORS_ORIGINS
+      ? process.env.WS_CORS_ORIGINS.split(',')
+      : ['http://localhost:3000'],
+    methods: ['GET', 'POST', 'OPTIONS'],
+    allowedHeaders: ['authorization', 'content-type'],
+    credentials: true,
   },
   namespace: '/reviews-feedback',
 })
@@ -25,6 +30,7 @@ export class ReviewsFeedbackGateway
 
   private readonly logger = new Logger(ReviewsFeedbackGateway.name);
   private connectedClients = new Map<string, { socket: Socket; userId?: string; role?: string }>();
+  private readonly staffRoles = new Set(['STAFF', 'ADMIN', 'MODERATOR']);
 
   constructor(private readonly jwtService: JwtService) {}
 
@@ -77,9 +83,16 @@ export class ReviewsFeedbackGateway
 
     const { room } = data;
     
+    // Allow only known room prefixes within this namespace
+    const knownPrefixes = ['reviews', 'reviews:menu:', 'reviews:user:', 'feedback', 'feedback:user:', 'feedback:assigned:'];
+    if (!knownPrefixes.some((p) => room === p || room.startsWith(p))) {
+      client.emit('error', { message: 'Unauthorized: Unknown room' });
+      this.logger.warn(`Unauthorized room attempt by ${client.id} -> ${room}`);
+      return;
+    }
+    
     // Restrict global feedback room to staff roles only
-    const allowedStaffRoles = ['STAFF', 'ADMIN', 'MODERATOR'];
-    if (room === 'feedback' && !allowedStaffRoles.includes(clientData.role)) {
+    if (room === 'feedback' && !this.staffRoles.has(clientData.role!)) {
       client.emit('error', { message: 'Unauthorized: Feedback stream restricted to staff' });
       return;
     }
@@ -95,7 +108,11 @@ export class ReviewsFeedbackGateway
       return;
     }
     
-    if (room.startsWith('feedback:assigned:') && !room.endsWith(`:${clientData.userId}`)) {
+    if (
+      room.startsWith('feedback:assigned:') &&
+      !this.staffRoles.has(clientData.role!) &&
+      !room.endsWith(`:${clientData.userId}`)
+    ) {
       client.emit('error', { message: 'Unauthorized: Cannot join feedback rooms assigned to others' });
       return;
     }
@@ -161,8 +178,7 @@ export class ReviewsFeedbackGateway
     let room = 'feedback';
     
     // Restrict global feedback room to staff roles only
-    const allowedStaffRoles = ['STAFF', 'ADMIN', 'MODERATOR'];
-    if (!userId && !assignedTo && !allowedStaffRoles.includes(clientData.role)) {
+    if (!userId && !assignedTo && !this.staffRoles.has(clientData.role!)) {
       client.emit('error', { message: 'Unauthorized: Feedback stream restricted to staff' });
       return;
     }
@@ -309,7 +325,18 @@ export class ReviewsFeedbackGateway
   // Admin/Moderator events
   emitModerationUpdate(reviewId: string, moderationData: any) {
     this.logger.log(`Emitting moderation update: ${reviewId}`);
-    this.server.to('reviews').emit('review-moderated', { reviewId, ...moderationData });
+    const payload = { reviewId, ...moderationData };
+    this.server.to('reviews').emit('review-moderated', payload);
+
+    const menuItemId = moderationData.menuItemId ?? moderationData.review?.menuItemId;
+    if (menuItemId) {
+      this.server.to(`reviews:menu:${menuItemId}`).emit('review-moderated', payload);
+    }
+
+    const userId = moderationData.userId ?? moderationData.review?.userId;
+    if (userId) {
+      this.server.to(`reviews:user:${userId}`).emit('review-moderated', payload);
+    }
   }
 
   emitFeedbackAssignment(feedbackId: string, assignmentData: any) {
