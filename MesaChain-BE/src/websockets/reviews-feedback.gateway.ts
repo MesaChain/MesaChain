@@ -83,9 +83,18 @@ export class ReviewsFeedbackGateway
 
     const { room } = data;
     
-    // Allow only known room prefixes within this namespace
-    const knownPrefixes = ['reviews', 'reviews:menu:', 'reviews:user:', 'feedback', 'feedback:user:', 'feedback:assigned:'];
-    if (!knownPrefixes.some((p) => room === p || room.startsWith(p))) {
+    // Allow only known room names and prefixes within this namespace
+    const allowedExact = ['reviews', 'feedback'];
+    const allowedPrefixes = [
+      'reviews:menu:',
+      'reviews:user:',
+      'feedback:user:',
+      'feedback:assigned:',
+    ];
+    if (
+      !allowedExact.includes(room) &&
+      !allowedPrefixes.some((p) => room.startsWith(p))
+    ) {
       client.emit('error', { message: 'Unauthorized: Unknown room' });
       this.logger.warn(`Unauthorized room attempt by ${client.id} -> ${room}`);
       return;
