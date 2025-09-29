@@ -225,12 +225,34 @@ export class ReviewsFeedbackGateway
 
   emitReviewVote(reviewId: string, voteData: any) {
     this.logger.log(`Emitting review vote: ${reviewId}`);
-    this.server.to('reviews').emit('review-voted', { reviewId, ...voteData });
+    const payload = { reviewId, ...voteData };
+    this.server.to('reviews').emit('review-voted', payload);
+
+    const menuItemId = voteData.menuItemId ?? voteData.review?.menuItemId;
+    if (menuItemId) {
+      this.server.to(`reviews:menu:${menuItemId}`).emit('review-voted', payload);
+    }
+
+    const userId = voteData.userId ?? voteData.review?.userId;
+    if (userId) {
+      this.server.to(`reviews:user:${userId}`).emit('review-voted', payload);
+    }
   }
 
   emitReviewReport(reviewId: string, reportData: any) {
     this.logger.log(`Emitting review report: ${reviewId}`);
-    this.server.to('reviews').emit('review-reported', { reviewId, ...reportData });
+    const payload = { reviewId, ...reportData };
+    this.server.to('reviews').emit('review-reported', payload);
+
+    const menuItemId = reportData.menuItemId ?? reportData.review?.menuItemId;
+    if (menuItemId) {
+      this.server.to(`reviews:menu:${menuItemId}`).emit('review-reported', payload);
+    }
+
+    const userId = reportData.userId ?? reportData.review?.userId;
+    if (userId) {
+      this.server.to(`reviews:user:${userId}`).emit('review-reported', payload);
+    }
   }
 
   // Feedback event emitters
@@ -270,7 +292,18 @@ export class ReviewsFeedbackGateway
 
   emitFeedbackResponse(feedbackId: string, response: any) {
     this.logger.log(`Emitting feedback response: ${feedbackId}`);
-    this.server.to('feedback').emit('feedback-response', { feedbackId, response });
+    const payload = { feedbackId, response };
+    this.server.to('feedback').emit('feedback-response', payload);
+
+    const feedbackUserId = response.feedbackUserId ?? response.feedback?.userId;
+    if (feedbackUserId && response.isInternal !== true) {
+      this.server.to(`feedback:user:${feedbackUserId}`).emit('feedback-response', payload);
+    }
+
+    const assignedTo = response.assignedTo ?? response.feedback?.assignedTo;
+    if (assignedTo) {
+      this.server.to(`feedback:assigned:${assignedTo}`).emit('feedback-response', payload);
+    }
   }
 
   // Admin/Moderator events
@@ -281,7 +314,13 @@ export class ReviewsFeedbackGateway
 
   emitFeedbackAssignment(feedbackId: string, assignmentData: any) {
     this.logger.log(`Emitting feedback assignment: ${feedbackId}`);
-    this.server.to('feedback').emit('feedback-assigned', { feedbackId, ...assignmentData });
+    const payload = { feedbackId, ...assignmentData };
+    this.server.to('feedback').emit('feedback-assigned', payload);
+
+    const assignedTo = assignmentData.assignedTo ?? assignmentData.userId;
+    if (assignedTo) {
+      this.server.to(`feedback:assigned:${assignedTo}`).emit('feedback-assigned', payload);
+    }
   }
 
   // Get connected clients count
