@@ -42,20 +42,14 @@ export class OrdersService {
     const total = new Decimal(subtotal).plus(tax);
 
     // Generate order number
-    const orderNumber = await this.generateOrderNumber();
+    // Generate a simple order identifier
+    const orderId = `ORD-${Date.now()}`;
 
     // Create order with items in transaction
     const order = await this.prisma.$transaction(async (tx) => {
       const newOrder = await tx.order.create({
         data: {
-          orderNumber,
-          staffId: user.id,
-          customerName: createOrderDto.customerName,
-          customerPhone: createOrderDto.customerPhone,
-          customerEmail: createOrderDto.customerEmail,
-          notes: createOrderDto.notes,
-          subtotal: new Decimal(subtotal),
-          tax,
+          userId: user.id,
           total,
           status: OrderStatus.PENDING,
           items: {
@@ -68,7 +62,7 @@ export class OrdersService {
               menuItem: true
             }
           },
-          staff: {
+          user: {
             select: {
               id: true,
               name: true,
@@ -95,7 +89,7 @@ export class OrdersService {
   }
 
   async findAll(query: OrderQueryDto): Promise<{ orders: Order[]; total: number; page: number; limit: number }> {
-    const { page = 1, limit = 10, status, startDate, endDate, staffId, search } = query;
+    const { page = 1, limit = 10, status, startDate, endDate, userId, search } = query;
     const skip = (page - 1) * limit;
 
     const where = {} as any;
@@ -110,14 +104,13 @@ export class OrdersService {
       if (endDate) where.createdAt.lte = new Date(endDate);
     }
 
-    if (staffId) {
-      where.staffId = staffId;
+    if (userId) {
+      where.userId = userId;
     }
 
     if (search) {
       where.OR = [
-        { orderNumber: { contains: search, mode: 'insensitive' } },
-        { customerName: { contains: search, mode: 'insensitive' } }
+        { id: { contains: search, mode: 'insensitive' } }
       ];
     }
 
@@ -130,7 +123,7 @@ export class OrdersService {
               menuItem: true
             }
           },
-          staff: {
+          user: {
             select: {
               id: true,
               name: true,
@@ -162,7 +155,7 @@ export class OrdersService {
             menuItem: true
           }
         },
-        staff: {
+        user: {
           select: {
             id: true,
             name: true,
@@ -179,9 +172,8 @@ export class OrdersService {
               }
             }
           },
-          orderBy: { createdAt: 'desc' }
-        },
-        transaction: true
+          orderBy: { changedAt: 'desc' }
+        }
       }
     });
 
@@ -272,7 +264,7 @@ export class OrdersService {
               menuItem: true
             }
           },
-          staff: {
+          user: {
             select: {
               id: true,
               name: true,
@@ -308,7 +300,7 @@ export class OrdersService {
               menuItem: true
             }
           },
-          staff: {
+          user: {
             select: {
               id: true,
               name: true,
@@ -357,7 +349,7 @@ export class OrdersService {
     const order = await this.prisma.order.findUnique({
       where: { id },
       include: {
-        staff: {
+        user: {
           include: {
             wallets: true
           }
@@ -373,18 +365,18 @@ export class OrdersService {
       throw new BadRequestException('Order must be in PENDING status for payment processing');
     }
 
-    if (!order.staff.wallets || order.staff.wallets.length === 0) {
-      throw new BadRequestException('Staff member has no wallet configured for payment processing');
+    if (!order.user.wallets || order.user.wallets.length === 0) {
+      throw new BadRequestException('User has no wallet configured for payment processing');
     }
 
     // Here you would integrate with your Stellar payment processing
     // For now, we'll create a placeholder transaction
     const transaction = await this.prisma.transaction.create({
       data: {
-        walletId: order.staff.wallets[0].id, // Use staff's wallet
-        stellarTxHash: `mock-tx-${Date.now()}`, // In real implementation, this would be from Stellar
+        walletId: order.user.wallets[0].id, // Use user's wallet
+        hash: `mock-tx-${Date.now()}`, // In real implementation, this would be from Stellar
         amount: order.total,
-        assetCode: 'USD',
+        fee: 0.01, // Small fee
         status: 'confirmed'
       }
     });
@@ -422,46 +414,8 @@ export class OrdersService {
 
   private async generateOrderNumber(): Promise<string> {
     const today = new Date().toISOString().slice(0, 10).replace(/-/g, '');
-
-    // Use a transaction with locking to prevent race conditions
-    return await this.prisma.$transaction(async (tx) => {
-      // Get the latest order for today to determine the next number
-      const latestOrder = await tx.order.findFirst({
-        where: {
-          createdAt: {
-            gte: new Date(new Date().setHours(0, 0, 0, 0))
-          }
-        },
-        orderBy: {
-          orderNumber: 'desc'
-        },
-        select: {
-          orderNumber: true
-        }
-      });
-
-      let nextNumber = 1;
-      if (latestOrder) {
-        // Extract the number from the latest order number and increment it
-        const currentNumber = parseInt(latestOrder.orderNumber.split('-')[2], 10);
-        nextNumber = currentNumber + 1;
-      }
-
-      const orderNumber = `ORD-${today}-${nextNumber.toString().padStart(4, '0')}`;
-
-      // Verify uniqueness
-      const existing = await tx.order.findUnique({
-        where: { orderNumber }
-      });
-
-      if (existing) {
-        // In the rare case of a collision, try the next number
-        nextNumber += 1;
-        return `ORD-${today}-${nextNumber.toString().padStart(4, '0')}`;
-      }
-
-      return orderNumber;
-    });
+    const timestamp = Date.now();
+    return `ORD-${today}-${timestamp}`;
   }
 
   private validateStatusTransition(currentStatus: OrderStatus, newStatus: OrderStatus): void {

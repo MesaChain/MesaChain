@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MesaChain WebSocket Client Example</title>
+    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .container { max-width: 800px; margin: 0 auto; }
+        .log { background: #f5f5f5; padding: 10px; margin: 10px 0; border-radius: 5px; height: 300px; overflow-y: auto; }
+        .controls { margin: 10px 0; }
+        button { margin: 5px; padding: 10px; }
+        input, select { margin: 5px; padding: 8px; }
+        .status { padding: 10px; margin: 10px 0; border-radius: 5px; }
+        .connected { background: #d4edda; color: #155724; }
+        .disconnected { background: #f8d7da; color: #721c24; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>MesaChain WebSocket Client Example</h1>
+        
+        <div id="status" class="status disconnected">Disconnected</div>
+        
+        <div class="controls">
+            <button onclick="connect()">Connect</button>
+            <button onclick="disconnect()">Disconnect</button>
+            <button onclick="clearLog()">Clear Log</button>
+        </div>
+        
+        <div class="controls">
+            <h3>Subscribe to Reviews</h3>
+            <input type="text" id="menuItemId" placeholder="Menu Item ID (optional)">
+            <input type="text" id="userId" placeholder="User ID (optional)">
+            <button onclick="subscribeReviews()">Subscribe to Reviews</button>
+            <button onclick="unsubscribeReviews()">Unsubscribe from Reviews</button>
+        </div>
+        
+        <div class="controls">
+            <h3>Subscribe to Feedback</h3>
+            <input type="text" id="feedbackUserId" placeholder="User ID (optional)">
+            <input type="text" id="assignedTo" placeholder="Assigned To (optional)">
+            <button onclick="subscribeFeedback()">Subscribe to Feedback</button>
+            <button onclick="unsubscribeFeedback()">Unsubscribe from Feedback</button>
+        </div>
+        
+        <div class="controls">
+            <h3>Test Events</h3>
+            <button onclick="testNewReview()">Test New Review</button>
+            <button onclick="testNewFeedback()">Test New Feedback</button>
+            <button onclick="testSystemNotification()">Test System Notification</button>
+        </div>
+        
+        <div class="controls">
+            <h3>Connection Info</h3>
+            <div id="connectionInfo">Not connected</div>
+        </div>
+        
+        <h3>Event Log</h3>
+        <div id="log" class="log"></div>
+    </div>
+
+    <script>
+        let socket = null;
+        let isConnected = false;
+        let currentReviewRoom = 'reviews';
+        let currentFeedbackRoom = 'feedback';
+
+        function log(message) {
+            const logDiv = document.getElementById('log');
+            const timestamp = new Date().toLocaleTimeString();
+            logDiv.innerHTML += `[${timestamp}] ${message}<br>`;
+            logDiv.scrollTop = logDiv.scrollHeight;
+        }
+
+        function updateStatus(connected) {
+            const statusDiv = document.getElementById('status');
+            const connectionInfoDiv = document.getElementById('connectionInfo');
+            
+            if (connected) {
+                statusDiv.textContent = 'Connected';
+                statusDiv.className = 'status connected';
+                connectionInfoDiv.textContent = `Socket ID: ${socket.id}`;
+            } else {
+                statusDiv.textContent = 'Disconnected';
+                statusDiv.className = 'status disconnected';
+                connectionInfoDiv.textContent = 'Not connected';
+            }
+        }
+
+        function connect() {
+            if (socket) {
+                log('Already connected!');
+                return;
+            }
+
+            socket = io('http://localhost:3000/reviews-feedback', {
+                transports: ['websocket']
+            });
+
+            socket.on('connect', () => {
+                isConnected = true;
+                updateStatus(true);
+                log('Connected to WebSocket server');
+            });
+
+            socket.on('disconnect', () => {
+                isConnected = false;
+                updateStatus(false);
+                log('Disconnected from WebSocket server');
+                socket = null;
+            });
+
+            socket.on('connect_error', (error) => {
+                log(`Connection error: ${error.message}`);
+            });
+
+            // Review events
+            socket.on('new-review', (data) => {
+                log(`NEW REVIEW: ${JSON.stringify(data, null, 2)}`);
+            });
+
+            socket.on('review-updated', (data) => {
+                log(`REVIEW UPDATED: ${JSON.stringify(data, null, 2)}`);
+            });
+
+            socket.on('review-voted', (data) => {
+                log(`REVIEW VOTED: ${JSON.stringify(data, null, 2)}`);
+            });
+
+            socket.on('review-reported', (data) => {
+                log(`REVIEW REPORTED: ${JSON.stringify(data, null, 2)}`);
+            });
+
+            socket.on('review-moderated', (data) => {
+                log(`REVIEW MODERATED: ${JSON.stringify(data, null, 2)}`);
+            });
+
+            // Feedback events
+            socket.on('new-feedback', (data) => {
+                log(`NEW FEEDBACK: ${JSON.stringify(data, null, 2)}`);
+            });
+
+            socket.on('feedback-updated', (data) => {
+                log(`FEEDBACK UPDATED: ${JSON.stringify(data, null, 2)}`);
+            });
+
+            socket.on('feedback-response', (data) => {
+                log(`FEEDBACK RESPONSE: ${JSON.stringify(data, null, 2)}`);
+            });
+
+            socket.on('feedback-assigned', (data) => {
+                log(`FEEDBACK ASSIGNED: ${JSON.stringify(data, null, 2)}`);
+            });
+
+            // System events
+            socket.on('system-notification', (data) => {
+                log(`SYSTEM NOTIFICATION: ${JSON.stringify(data, null, 2)}`);
+            });
+
+            socket.on('review-stats-updated', (data) => {
+                log(`REVIEW STATS UPDATED: ${JSON.stringify(data, null, 2)}`);
+            });
+
+            socket.on('feedback-stats-updated', (data) => {
+                log(`FEEDBACK STATS UPDATED: ${JSON.stringify(data, null, 2)}`);
+            });
+
+            // Subscription confirmations
+            socket.on('subscribed-reviews', (data) => {
+                log(`SUBSCRIBED TO REVIEWS: ${JSON.stringify(data, null, 2)}`);
+            });
+
+            socket.on('subscribed-feedback', (data) => {
+                log(`SUBSCRIBED TO FEEDBACK: ${JSON.stringify(data, null, 2)}`);
+            });
+        }
+
+        function disconnect() {
+            if (socket) {
+                socket.disconnect();
+                socket = null;
+                isConnected = false;
+                updateStatus(false);
+                log('Disconnected from WebSocket server');
+            }
+        }
+
+        function subscribeReviews() {
+            if (!socket || !isConnected) {
+                log('Not connected!');
+                return;
+            }
+
+            const menuItemId = document.getElementById('menuItemId').value;
+            const userId = document.getElementById('userId').value;
+            
+            let room = 'reviews';
+            if (menuItemId) {
+                room = `reviews:menu:${menuItemId}`;
+            } else if (userId) {
+                room = `reviews:user:${userId}`;
+            }
+            currentReviewRoom = room;
+            
+            socket.emit('subscribe-reviews', {
+                menuItemId: menuItemId || undefined,
+                userId: userId || undefined
+            });
+        }
+
+        function unsubscribeReviews() {
+            if (!socket || !isConnected) {
+                log('Not connected!');
+                return;
+            }
+
+            socket.emit('leave-room', { room: currentReviewRoom });
+        }
+
+        function subscribeFeedback() {
+            if (!socket || !isConnected) {
+                log('Not connected!');
+                return;
+            }
+
+            const userId = document.getElementById('feedbackUserId').value;
+            const assignedTo = document.getElementById('assignedTo').value;
+            
+            let room = 'feedback';
+            if (userId) {
+                room = `feedback:user:${userId}`;
+            } else if (assignedTo) {
+                room = `feedback:assigned:${assignedTo}`;
+            }
+            currentFeedbackRoom = room;
+            
+            socket.emit('subscribe-feedback', {
+                userId: userId || undefined,
+                assignedTo: assignedTo || undefined
+            });
+        }
+
+        function unsubscribeFeedback() {
+            if (!socket || !isConnected) {
+                log('Not connected!');
+                return;
+            }
+
+            socket.emit('leave-room', { room: currentFeedbackRoom });
+        }
+
+        function testNewReview() {
+            if (!socket || !isConnected) {
+                log('Not connected!');
+                return;
+            }
+
+            // Simulate a new review event
+            socket.emit('test-new-review', {
+                id: 'test-review-' + Date.now(),
+                userId: 'test-user',
+                menuItemId: 'test-menu-item',
+                rating: 5,
+                content: 'This is a test review!',
+                status: 'approved',
+                isVerified: true,
+                isAnonymous: false,
+                createdAt: new Date(),
+                updatedAt: new Date()
+            });
+        }
+
+        function testNewFeedback() {
+            if (!socket || !isConnected) {
+                log('Not connected!');
+                return;
+            }
+
+            // Simulate a new feedback event
+            socket.emit('test-new-feedback', {
+                id: 'test-feedback-' + Date.now(),
+                userId: 'test-user',
+                category: 'general',
+                priority: 'medium',
+                status: 'open',
+                subject: 'Test Feedback',
+                message: 'This is a test feedback message!',
+                createdAt: new Date(),
+                updatedAt: new Date()
+            });
+        }
+
+        function testSystemNotification() {
+            if (!socket || !isConnected) {
+                log('Not connected!');
+                return;
+            }
+
+            socket.emit('test-system-notification', {
+                message: 'This is a test system notification!',
+                type: 'info'
+            });
+        }
+
+        function clearLog() {
+            document.getElementById('log').innerHTML = '';
+        }
+
+        // Auto-connect on page load
+        window.onload = function() {
+            log('WebSocket Client Example loaded. Click Connect to start.');
+        };
+    </script>
+</body>
+</html>
+

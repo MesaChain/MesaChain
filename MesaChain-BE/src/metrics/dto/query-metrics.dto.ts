@@ -1,5 +1,4 @@
-import { IsOptional, IsEnum, IsDateString, IsString, IsArray, IsNumber, Min, Max } from 'class-validator';
-import { Transform, Type } from 'class-transformer';
+import { IsOptional, IsEnum, IsString, IsDateString, IsNumber, Min, Max } from 'class-validator';
 import { MetricCategory, AggregationPeriod } from '../types/enums';
 
 export class QueryMetricsDto {
@@ -12,10 +11,6 @@ export class QueryMetricsDto {
   name?: string;
 
   @IsOptional()
-  @IsString()
-  source?: string;
-
-  @IsOptional()
   @IsDateString()
   startDate?: string;
 
@@ -24,24 +19,33 @@ export class QueryMetricsDto {
   endDate?: string;
 
   @IsOptional()
-  @IsArray()
-  @IsString({ each: true })
-  tags?: string[];
+  @IsEnum(AggregationPeriod)
+  period?: AggregationPeriod;
 
   @IsOptional()
-  @Type(() => Number)
+  @IsString()
+  userId?: string;
+
+  @IsOptional()
   @IsNumber()
   @Min(1)
   @Max(1000)
   limit?: number = 100;
 
   @IsOptional()
-  @Type(() => Number)
   @IsNumber()
   @Min(0)
   offset?: number = 0;
 
   @IsOptional()
-  @IsEnum(AggregationPeriod)
-  aggregation?: AggregationPeriod;
+  @IsString()
+  source?: string;
+
+  @IsOptional()
+  @IsString()
+  tags?: string[];
+
+  @IsOptional()
+  @IsString()
+  aggregation?: string;
 }

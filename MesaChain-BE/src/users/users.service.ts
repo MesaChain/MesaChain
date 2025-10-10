@@ -95,7 +95,7 @@ export class UsersService {
     if (roleChanged && dto.role) {
       await this.auditService.logRoleChange(
         id,
-        oldRole,
+        oldRole as any,
         dto.role,
         currentUser.id,
         `Role changed from ${oldRole} to ${dto.role}`

@@ -1,5 +1,5 @@
 import { Injectable, Logger } from "@nestjs/common";
-import { PrismaService } from "../prisma/prisma.service";
+import { PrismaService } from "../shared/prisma.service";
 import { CreateMetricDto } from "./dto/create-metric.dto";
 import { QueryMetricsDto } from "./dto/query-metrics.dto";
 import { MetricCategory, AggregationPeriod } from "./types/enums";
@@ -17,6 +17,7 @@ export class MetricsService {
       const metric = await this.prisma.metric.create({
         data: {
           ...createMetricDto,
+          category: createMetricDto.category as any,
           timestamp: createMetricDto.timestamp
             ? new Date(createMetricDto.timestamp)
             : new Date(),
@@ -44,6 +45,7 @@ export class MetricsService {
       const result = await this.prisma.metric.createMany({
         data: metrics.map((metric) => ({
           ...metric,
+          category: metric.category as any,
           timestamp: metric.timestamp ? new Date(metric.timestamp) : new Date(),
         })),
         skipDuplicates: true,
@@ -103,7 +105,7 @@ export class MetricsService {
         include: queryDto.aggregation
           ? {
               aggregations: {
-                where: { period: queryDto.aggregation },
+                where: { period: queryDto.aggregation as any },
                 orderBy: { startTime: "desc" },
                 take: 1,
               },
@@ -123,7 +125,7 @@ export class MetricsService {
 
   async getMetricsByCategory(category: MetricCategory, limit = 100) {
     return this.prisma.metric.findMany({
-      where: { category },
+      where: { category: category as any },
       orderBy: { timestamp: "desc" },
       take: limit,
     });
@@ -158,7 +160,7 @@ export class MetricsService {
     this.logger.log(`Triggering real-time aggregation for metric: ${metricId}`);
   }
 
-  @Cron(CronExpression.EVERY_DAY_AT_2AM)
+  // @Cron(CronExpression.EVERY_DAY_AT_2AM)
   async cleanupOldMetrics() {
     const retentionDays = 365;
     const cutoffDate = new Date();

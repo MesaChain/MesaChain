@@ -6,7 +6,7 @@ import {
   forwardRef,
   ForbiddenException,
 } from "@nestjs/common";
-import { PrismaService } from "../prisma/prisma.service";
+import { PrismaService } from "../shared/prisma.service";
 import { CreateReservationDto } from "./dto/create-reservation.dto";
 import {
   UpdateReservationDto,

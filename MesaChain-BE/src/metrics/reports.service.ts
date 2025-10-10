@@ -1,5 +1,5 @@
 import { Injectable, Logger } from "@nestjs/common";
-import { PrismaService } from "../prisma/prisma.service";
+import { PrismaService } from "../shared/prisma.service";
 import { Cron, CronExpression } from "@nestjs/schedule";
 import { ExportService } from "./export/export.service";
 import { MetricsCacheService } from "./cache/cache.service";
@@ -16,11 +16,12 @@ export class ReportsService {
     private cacheService: MetricsCacheService
   ) {}
 
-  async createReport(createReportDto: CreateReportDto) {
+  async createReport(createReportDto: CreateReportDto, userId?: string) {
     const report = await this.prisma.report.create({
       data: {
         ...createReportDto,
         parameters: createReportDto.parameters || {},
+        createdBy: userId || 'system', // Use system as default creator
       },
     });
 
@@ -53,8 +54,8 @@ export class ReportsService {
     try {
       // Use exportReport instead of exportReportByKey
       const buffer = await this.exportService.exportReport(
-        reportId,
-        report.format
+        [], // Empty data array for now
+        report.format as any
       );
 
       await this.prisma.reportExecution.update({

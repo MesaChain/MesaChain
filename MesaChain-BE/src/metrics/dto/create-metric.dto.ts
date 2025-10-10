@@ -1,28 +1,32 @@
-import { IsString, IsNumber, IsEnum, IsOptional, IsObject, IsDateString } from 'class-validator';
+import { IsString, IsEnum, IsOptional, IsNumber, IsObject } from 'class-validator';
 import { MetricCategory } from '../types/enums';
 
 export class CreateMetricDto {
   @IsString()
   name: string;
 
-  @IsNumber()
-  value: number;
-
   @IsEnum(MetricCategory)
   category: MetricCategory;
 
-  @IsString()
-  source: string;
+  @IsNumber()
+  value: number;
 
   @IsOptional()
   @IsObject()
   metadata?: Record<string, any>;
 
   @IsOptional()
-  @IsObject()
-  tags?: Record<string, any>;
+  @IsString()
+  userId?: string;
 
   @IsOptional()
-  @IsDateString()
+  @IsString()
+  sessionId?: string;
+
+  @IsString()
+  source: string = 'api';
+
+  @IsOptional()
+  @IsString()
   timestamp?: string;
 }

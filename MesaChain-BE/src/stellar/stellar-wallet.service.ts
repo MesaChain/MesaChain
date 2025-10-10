@@ -1,5 +1,5 @@
 import { Injectable, Logger } from "@nestjs/common";
-import { PrismaService } from "../prisma/prisma.service";
+import { PrismaService } from "../shared/prisma.service";
 import { EncryptionService } from "../common/services/encryption.service";
 import { StrKey } from 'stellar-sdk';  // Add this import
 
@@ -41,7 +41,7 @@ export class StellarWalletService {
           userId,
           publicKey,
           secretKey: encryptedSecretKey,
-          network,
+          network: network as any,
         },
       });
 
