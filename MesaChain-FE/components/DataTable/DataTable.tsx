@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import type { ChangeEvent } from "react";
 import { useTable } from "./useTable";
 import type { DataTableProps } from "./types";
 import { Input } from "@/components/ui/input";
@@ -87,6 +88,17 @@ export function DataTable<T = any>(props: DataTableProps<T>) {
     return allRows.slice(0, count);
   }, [paginationMode, options.serverSide, rows, allRows, page.pageIndex, page.pageSize]);
 
+  const [expandedRowIds, setExpandedRowIds] = useState<Set<string>>(new Set());
+
+  const toggleRowExpanded = (id: string) => {
+    setExpandedRowIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
   const TableBodyContent = () => {
     if (isLoading) {
       return (
@@ -133,11 +145,10 @@ export function DataTable<T = any>(props: DataTableProps<T>) {
     }
 
     const renderRow = (row: T, rowIndex: number) => {
-      const getRowId = options.getRowId ?? ((r: T, i: number) => String(i));
+      const getRowId = options.getRowId ?? ((_row: T, i: number) => String(i));
       const id = getRowId(row, rowIndex);
       const isSelected = selectedRowIds.has(id);
-
-      const [expanded, setExpanded] = useState(false);
+      const isExpanded = expandedRowIds.has(id);
 
       return (
         <>
@@ -186,15 +197,15 @@ export function DataTable<T = any>(props: DataTableProps<T>) {
                 <button
                   type="button"
                   className="text-xs text-gray-500 underline"
-                  onClick={() => setExpanded((v) => !v)}
+                  onClick={() => toggleRowExpanded(id)}
                 >
-                  {expanded ? "Hide" : "Details"}
+                  {isExpanded ? "Hide" : "Details"}
                 </button>
               </td>
             )}
           </tr>
 
-          {renderExpandedRow && expanded && (
+          {renderExpandedRow && isExpanded && (
             <tr>
               <td
                 colSpan={
@@ -246,7 +257,9 @@ export function DataTable<T = any>(props: DataTableProps<T>) {
         <div className="flex items-center gap-2">
           <Input
             value={searchInput}
-            onChange={(e) => setSearchInput(e.target.value)}
+            onChange={(e: ChangeEvent<HTMLInputElement>) =>
+              setSearchInput(e.target.value)
+            }
             placeholder="Search..."
             className="w-64"
             aria-label="Search table"
@@ -341,12 +354,14 @@ export function DataTable<T = any>(props: DataTableProps<T>) {
                       {col.FilterComponent ? (
                         <col.FilterComponent
                           value={filters[col.key as string]}
-                          onChange={(val) => setFilter(col.key as string, val)}
+                          onChange={(val: unknown) =>
+                            setFilter(col.key as string, val)
+                          }
                         />
                       ) : (
                         <Input
                           value={filters[col.key as string] ?? ""}
-                          onChange={(e) =>
+                          onChange={(e: ChangeEvent<HTMLInputElement>) =>
                             setFilter(col.key as string, e.target.value)
                           }
                           className="h-8 text-xs"
@@ -376,7 +391,9 @@ export function DataTable<T = any>(props: DataTableProps<T>) {
             <select
               className="border rounded px-2 py-1 text-xs"
               value={page.pageSize}
-              onChange={(e) => setPageSize(Number(e.target.value))}
+              onChange={(e: ChangeEvent<HTMLSelectElement>) =>
+                setPageSize(Number(e.target.value))
+              }
             >
               {(options.pageSizeOptions ?? [10, 20, 50, 100]).map((size) => (
                 <option key={size} value={size}>

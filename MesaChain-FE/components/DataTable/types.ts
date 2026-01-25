@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import type { ReactNode, ComponentType } from "react";
 
 export type SortDirection = "asc" | "desc";
 
@@ -13,7 +13,7 @@ export interface ColumnDefinition<T = any> {
   filterable?: boolean;
   filterType?: "text" | "number" | "date" | "select" | "custom";
   filterOptions?: { label: string; value: any }[];
-  FilterComponent?: React.ComponentType<{
+  FilterComponent?: ComponentType<{
     value: any;
     onChange: (val: any) => void;
   }>;
