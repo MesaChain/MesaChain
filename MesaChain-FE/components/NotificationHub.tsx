@@ -131,6 +131,7 @@ export default function NotificationHub({
     >()
   );
   const pausedIds = useRef(new Set<string>());
+  const playedSoundIds = useRef(new Set<string>());
   const audioContextRef = useRef<AudioContext | null>(null);
 
   useEffect(() => {
@@ -193,11 +194,13 @@ export default function NotificationHub({
     if (!lastAddedId) return;
     const latest = notifications.find((item) => item.id === lastAddedId);
     if (!latest) return;
+    if (playedSoundIds.current.has(latest.id)) return;
 
     const message = latest.title
       ? `${latest.title}. ${latest.message}`
       : latest.message;
     setAnnouncement(message);
+    playedSoundIds.current.add(latest.id);
 
     if (!settings.soundsEnabled) return;
     const sound = latest.sound ?? defaultSoundForType(latest.type, settings);
@@ -356,6 +359,8 @@ export default function NotificationHub({
         positionStyles[position ?? settings.position],
         isRightPosition ? "items-end" : "items-start"
       )}
+      role="region"
+      aria-label="Notifications"
       aria-live="polite"
     >
       <div className="sr-only" role="status" aria-atomic="true">
