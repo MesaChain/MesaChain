@@ -3,6 +3,7 @@ import { Inter } from "next/font/google";
 import { Toaster } from "react-hot-toast";
 import Providers from "../components/providers/QueryClientProvider";
 import AuthWrapper from "../components/auth/AuthWrapper";
+import NotificationHub from "../components/NotificationHub";
 import "./globals.css";
 
 const inter = Inter({ subsets: ["latin"] });
@@ -24,6 +25,7 @@ export default function RootLayout({
           <AuthWrapper>
             {children}
           </AuthWrapper>
+          <NotificationHub />
         </Providers>
         <Toaster position="top-right" />
       </body>
