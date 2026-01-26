@@ -13,6 +13,7 @@ import {
 import { cn } from "../lib/utils";
 import {
   defaultSoundForType,
+  notify,
   useNotificationStore,
 } from "../store/useNotificationStore";
 import {
@@ -55,6 +56,8 @@ type HistoryDateFilter = (typeof historyDateFilters)[number]["value"];
 type NotificationHubProps = {
   maxVisible?: number;
   position?: NotificationPosition;
+  autoDismiss?: number;
+  storageKey?: string;
   enableSocket?: boolean;
   socketRoom?: string;
   socketEventName?: string;
@@ -89,9 +92,11 @@ const matchesDateFilter = (value: number, filter: HistoryDateFilter) => {
   return date >= start;
 };
 
-export default function NotificationHub({
+export function NotificationHub({
   maxVisible,
   position,
+  autoDismiss,
+  storageKey,
   enableSocket = true,
   socketRoom,
   socketEventName,
@@ -104,11 +109,13 @@ export default function NotificationHub({
   const dismissNotification = useNotificationStore(
     (state) => state.dismissNotification
   );
-  const addNotification = useNotificationStore((state) => state.addNotification);
   const markRead = useNotificationStore((state) => state.markRead);
   const markAllRead = useNotificationStore((state) => state.markAllRead);
   const clearHistory = useNotificationStore((state) => state.clearHistory);
   const setSettings = useNotificationStore((state) => state.setSettings);
+  const hydrateFromStorage = useNotificationStore(
+    (state) => state.hydrateFromStorage
+  );
 
   useNotificationSocket({
     enabled: enableSocket,
@@ -135,22 +142,66 @@ export default function NotificationHub({
   const audioContextRef = useRef<AudioContext | null>(null);
 
   useEffect(() => {
-    if (maxVisible || position) {
+    if (maxVisible || position || typeof autoDismiss === "number") {
       setSettings({
         maxVisible: maxVisible ?? settings.maxVisible,
         position: position ?? settings.position,
+        autoDismissMs: autoDismiss ?? settings.autoDismissMs,
       });
     }
-  }, [maxVisible, position, setSettings, settings.maxVisible, settings.position]);
+  }, [
+    maxVisible,
+    position,
+    autoDismiss,
+    setSettings,
+    settings.maxVisible,
+    settings.position,
+    settings.autoDismissMs,
+  ]);
+
+  useEffect(() => {
+    if (!storageKey) return;
+    try {
+      const raw = localStorage.getItem(storageKey);
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        const storedState = parsed?.state ?? parsed;
+        hydrateFromStorage({
+          notifications: storedState?.notifications,
+          settings: storedState?.settings,
+        });
+      }
+    } catch {
+      // Ignore invalid storage payloads.
+    }
+
+    const unsubscribe = useNotificationStore.subscribe((state) => {
+      try {
+        const payload = {
+          state: {
+            notifications: state.notifications,
+            settings: state.settings,
+          },
+          version: 0,
+        };
+        localStorage.setItem(storageKey, JSON.stringify(payload));
+      } catch {
+        // Ignore storage write failures.
+      }
+    });
+
+    return () => {
+      unsubscribe();
+    };
+  }, [storageKey, hydrateFromStorage]);
 
   useEffect(() => {
     if (process.env.NODE_ENV !== "development") return;
-    (window as Window & { notify?: typeof addNotification }).notify =
-      addNotification;
+    (window as Window & { notify?: typeof notify }).notify = notify;
     return () => {
-      delete (window as Window & { notify?: typeof addNotification }).notify;
+      delete (window as Window & { notify?: typeof notify }).notify;
     };
-  }, [addNotification]);
+  }, []);
 
   const unreadCount = useMemo(
     () => notifications.filter((notification) => !notification.readAt).length,
@@ -412,6 +463,7 @@ export default function NotificationHub({
           const tone = typeStyles[notification.type];
           const isExiting = exitingIds.has(notification.id);
           const isUnread = !notification.readAt;
+          const isClickable = Boolean(notification.onClick);
 
           return (
             <div
@@ -429,6 +481,19 @@ export default function NotificationHub({
                 markRead(notification.id);
               }}
               onBlur={() => resumeTimer(notification.id)}
+              onClick={() => {
+                if (!notification.onClick) return;
+                notification.onClick();
+                markRead(notification.id);
+              }}
+              onKeyDown={(event) => {
+                if (!notification.onClick) return;
+                if (event.key === "Enter" || event.key === " ") {
+                  event.preventDefault();
+                  notification.onClick();
+                  markRead(notification.id);
+                }
+              }}
               className={cn(
                 "notification-card w-full rounded-2xl border px-4 py-3 text-sm shadow-lg outline-none transition-all",
                 tone,
@@ -436,7 +501,8 @@ export default function NotificationHub({
                 isExiting
                   ? "animate-notification-out"
                   : "animate-notification-in",
-                "focus-visible:ring-2 focus-visible:ring-foreground/30"
+                "focus-visible:ring-2 focus-visible:ring-foreground/30",
+                isClickable && "cursor-pointer"
               )}
               aria-live={notification.type === "error" ? "assertive" : "polite"}
             >
@@ -615,3 +681,5 @@ export default function NotificationHub({
     </div>
   );
 }
+
+export default NotificationHub;

@@ -25,6 +25,7 @@ export type NotificationItem = {
   message: string;
   icon?: string;
   actions?: NotificationAction[];
+  onClick?: () => void;
   progress?: number;
   duration?: number;
   createdAt: number;
