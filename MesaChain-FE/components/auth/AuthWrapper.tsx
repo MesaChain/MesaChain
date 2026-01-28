@@ -15,7 +15,7 @@ export default function AuthWrapper({ children }: AuthWrapperProps) {
   const pathname = usePathname();
 
   // Pages that don't require authentication
-  const publicPages = ['/login'];
+  const publicPages = ['/login', '/reviews-feedback'];
   const isPublicPage = publicPages.includes(pathname);
 
   // Show loading state

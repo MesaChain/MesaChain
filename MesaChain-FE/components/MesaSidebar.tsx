@@ -10,6 +10,7 @@ import {
   FaCog,
   FaStar,
   FaProjectDiagram,
+  FaComments,
 } from "react-icons/fa";
 import SidebarItem from "./sidebar/SideBarItems";
 import UserProfile from "./sidebar/UserProfile";
@@ -35,6 +36,7 @@ const Sidebar: React.FC = () => {
     { icon: FaCog, label: "Settings", href: "/settings", permission: Permission.ADMIN },
     { icon: FaStar, label: "Loyalty", href: "/loyalty", permission: null },
     { icon: FaProjectDiagram, label: "API Management", href: "/api-management", permission: null },
+    { icon: FaComments, label: "Reviews & Feedback", href: "/reviews-feedback", permission: null },
   ];
 
   // Filter sidebar items based on user permissions

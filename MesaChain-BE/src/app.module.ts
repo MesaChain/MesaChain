@@ -15,7 +15,6 @@ import { ReviewsModule } from './reviews/reviews.module';
 import { FeedbackModule } from './feedback/feedback.module';
 import { PrismaModule } from './shared/prisma.module';
 import { GlobalExceptionFilter } from './filters/global-exception.filter';
-import { GraphQLAppModule } from './graphql/graphql.module';
 import { WebSocketModule } from './websockets/websocket.module';
 
 @Module({
@@ -32,7 +31,7 @@ import { WebSocketModule } from './websockets/websocket.module';
     // MetricsModule,
     ReviewsModule,
     FeedbackModule,
-    GraphQLAppModule,
+    // GraphQLAppModule,
     WebSocketModule,
   ],
   controllers: [AppController],

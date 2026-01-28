@@ -2,7 +2,6 @@ import { Injectable, Logger } from '@nestjs/common';
 import * as natural from 'natural';
 import * as sentiment from 'sentiment';
 import * as ProfanityUtil from 'profanity-util';
-import * as BadWords from 'bad-words';
 
 export interface ModerationResult {
   isApproved: boolean;
@@ -36,7 +35,6 @@ export interface ModerationResult {
 export class AiModerationService {
   private readonly logger = new Logger(AiModerationService.name);
   private readonly sentimentAnalyzer = new sentiment();
-  private readonly badWordsFilter = new (BadWords as any)();
   private readonly spamKeywords = [
     'buy now', 'click here', 'free money', 'guaranteed', 'act now',
     'limited time', 'exclusive offer', 'no risk', 'instant', 'urgent',
@@ -129,7 +127,6 @@ export class AiModerationService {
     
     // Check for profanity using multiple methods
     const profanityCheck = ProfanityUtil.check(content);
-    const badWordsCheck = this.badWordsFilter.isProfane(content);
     
     // Additional toxic patterns
     const toxicPatterns = [
@@ -149,7 +146,7 @@ export class AiModerationService {
       }
     });
 
-    const isToxic = profanityCheck.isProfane || badWordsCheck || toxicityLevel > 2;
+    const isToxic = profanityCheck.isProfane || toxicityLevel > 2;
     const level: 'low' | 'medium' | 'high' = toxicityLevel > 5 ? 'high' : toxicityLevel > 2 ? 'medium' : 'low';
 
     return {

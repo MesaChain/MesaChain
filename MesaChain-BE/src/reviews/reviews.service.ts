@@ -125,7 +125,9 @@ export class ReviewsService {
 
   async findAll(query: ReviewQueryDto): Promise<{ reviews: any[]; total: number; page: number; limit: number }> {
     const { page = 1, limit = 10, ...filters } = query;
-    const skip = (page - 1) * limit;
+    const pageNumber = Math.max(1, Number(page) || 1);
+    const limitNumber = Math.max(1, Number(limit) || 10);
+    const skip = (pageNumber - 1) * limitNumber;
 
     const where: any = {};
     
@@ -134,7 +136,10 @@ export class ReviewsService {
     }
     
     if (filters.rating) {
-      where.rating = filters.rating;
+      const ratingValue = Number(filters.rating);
+      if (!Number.isNaN(ratingValue)) {
+        where.rating = ratingValue;
+      }
     }
     
     if (filters.menuItemId) {
@@ -205,7 +210,7 @@ export class ReviewsService {
         },
         orderBy,
         skip,
-        take: limit
+        take: limitNumber
       }),
       this.prismaClient.review.count({ where })
     ]);
@@ -213,8 +218,8 @@ export class ReviewsService {
     return {
       reviews,
       total,
-      page,
-      limit
+      page: pageNumber,
+      limit: limitNumber
     };
   }
 
