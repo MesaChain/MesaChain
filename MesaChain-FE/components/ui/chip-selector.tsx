@@ -55,10 +55,30 @@ export function ChipSelector({
 }: ChipSelectorProps) {
   const chipRefs = React.useRef<(HTMLDivElement | null)[]>([]);
 
-  // Reset refs array when options change to ensure it matches the length
   React.useEffect(() => {
     chipRefs.current = chipRefs.current.slice(0, options.length);
   }, [options]);
+
+  function findSelectedIndex(opts: Option[], val: string | string[]) {
+    if (Array.isArray(val)) {
+      return opts.findIndex((opt) => val.includes(opt.value));
+    }
+    return opts.findIndex((opt) => opt.value === val);
+  }
+
+  const [focusedIndex, setFocusedIndex] = React.useState(() => {
+    const selectedIndex = findSelectedIndex(options, value);
+    return selectedIndex >= 0 ? selectedIndex : 0;
+  });
+
+  React.useEffect(() => {
+    if (options.length === 0) return;
+    setFocusedIndex((prev) => {
+      if (prev >= 0 && prev < options.length) return prev;
+      const selectedIndex = findSelectedIndex(options, value);
+      return selectedIndex >= 0 ? selectedIndex : 0;
+    });
+  }, [options, value]);
 
   const isSelected = (optionValue: string) => {
     if (Array.isArray(value)) {
@@ -94,7 +114,11 @@ export function ChipSelector({
     }
   };
 
-  const handleKeyDown = (e: React.KeyboardEvent, optionValue: string, index: number) => {
+  const handleKeyDown = (
+    e: React.KeyboardEvent,
+    optionValue: string,
+    index: number
+  ) => {
     if (isDisabled) return;
     if (e.key === "Enter" || e.key === " ") {
       e.preventDefault();
@@ -102,10 +126,12 @@ export function ChipSelector({
     } else if (e.key === "ArrowRight" || e.key === "ArrowDown") {
       e.preventDefault();
       const nextIndex = (index + 1) % options.length;
+      setFocusedIndex(nextIndex);
       chipRefs.current[nextIndex]?.focus();
     } else if (e.key === "ArrowLeft" || e.key === "ArrowUp") {
       e.preventDefault();
       const prevIndex = (index - 1 + options.length) % options.length;
+      setFocusedIndex(prevIndex);
       chipRefs.current[prevIndex]?.focus();
     }
   };
@@ -130,8 +156,13 @@ export function ChipSelector({
               role="button"
               aria-pressed={selected}
               aria-disabled={isDisabled}
-              tabIndex={isDisabled ? -1 : 0}
-              onClick={() => handleSelect(option.value)}
+              tabIndex={isDisabled ? -1 : index === focusedIndex ? 0 : -1}
+              onClick={() => {
+                setFocusedIndex(index);
+                handleSelect(option.value);
+                chipRefs.current[index]?.focus();
+              }}
+              onFocus={() => setFocusedIndex(index)}
               onKeyDown={(e) => handleKeyDown(e, option.value, index)}
               className={cn(
                 chipVariants({ variant: selected ? "selected" : "default" }),
@@ -145,6 +176,7 @@ export function ChipSelector({
       </div>
       {showClear && (
         <button
+          type="button"
           onClick={onClear}
           disabled={isDisabled}
           className="text-sm text-muted-foreground hover:text-foreground self-start flex items-center gap-1 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
