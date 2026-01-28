@@ -53,6 +53,13 @@ export function ChipSelector({
   onClear,
   className,
 }: ChipSelectorProps) {
+  const chipRefs = React.useRef<(HTMLDivElement | null)[]>([]);
+
+  // Reset refs array when options change to ensure it matches the length
+  React.useEffect(() => {
+    chipRefs.current = chipRefs.current.slice(0, options.length);
+  }, [options]);
+
   const isSelected = (optionValue: string) => {
     if (Array.isArray(value)) {
       return value.includes(optionValue);
@@ -87,11 +94,19 @@ export function ChipSelector({
     }
   };
 
-  const handleKeyDown = (e: React.KeyboardEvent, optionValue: string) => {
+  const handleKeyDown = (e: React.KeyboardEvent, optionValue: string, index: number) => {
     if (isDisabled) return;
     if (e.key === "Enter" || e.key === " ") {
       e.preventDefault();
       handleSelect(optionValue);
+    } else if (e.key === "ArrowRight" || e.key === "ArrowDown") {
+      e.preventDefault();
+      const nextIndex = (index + 1) % options.length;
+      chipRefs.current[nextIndex]?.focus();
+    } else if (e.key === "ArrowLeft" || e.key === "ArrowUp") {
+      e.preventDefault();
+      const prevIndex = (index - 1 + options.length) % options.length;
+      chipRefs.current[prevIndex]?.focus();
     }
   };
 
@@ -104,17 +119,20 @@ export function ChipSelector({
         className="flex flex-wrap gap-2"
         aria-disabled={isDisabled}
       >
-        {options.map((option) => {
+        {options.map((option, index) => {
           const selected = isSelected(option.value);
           return (
             <div
               key={option.value}
+              ref={(el) => {
+                chipRefs.current[index] = el;
+              }}
               role="button"
               aria-pressed={selected}
               aria-disabled={isDisabled}
               tabIndex={isDisabled ? -1 : 0}
               onClick={() => handleSelect(option.value)}
-              onKeyDown={(e) => handleKeyDown(e, option.value)}
+              onKeyDown={(e) => handleKeyDown(e, option.value, index)}
               className={cn(
                 chipVariants({ variant: selected ? "selected" : "default" }),
                 isDisabled && "opacity-50 cursor-not-allowed"

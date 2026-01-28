@@ -35,7 +35,7 @@ export default function Checkout() {
     const walletHook = useWallet();
     const { walletState, loading: walletLoading, connectWallet, disconnectWallet, signTransaction } = walletHook;
     const [tipAmount, setTipAmount] = useState(0);
-    const [tipPercentage, setTipPercentage] = useState(18);
+    const [_tipPercentage, setTipPercentage] = useState(18);
     const [billSplits, setBillSplits] = useState<PayerSplit[]>([]);
     const [processingPayment, setProcessingPayment] = useState(false);
     const [stepTransitionComplete, setStepTransitionComplete] = useState(false);
@@ -87,7 +87,7 @@ export default function Checkout() {
     const handleWalletConnected = useCallback(() => {
         if (currentStep === 1 && !stepTransitionComplete) {
             setStepTransitionComplete(true);
-            const timer = setTimeout(() => {
+            setTimeout(() => {
                 setCurrentStep(2);
                 toast.success('Wallet connected! Proceeding to tip & split...');
                 setTimeout(() => setStepTransitionComplete(false), 1000);
