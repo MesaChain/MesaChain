@@ -106,7 +106,9 @@ export class FeedbackService {
 
   async findAll(query: FeedbackQueryDto): Promise<{ feedback: any[]; total: number; page: number; limit: number }> {
     const { page = 1, limit = 10, ...filters } = query;
-    const skip = (page - 1) * limit;
+    const pageNumber = Math.max(1, Number(page) || 1);
+    const limitNumber = Math.max(1, Number(limit) || 10);
+    const skip = (pageNumber - 1) * limitNumber;
 
     const where: any = {};
     
@@ -152,7 +154,7 @@ export class FeedbackService {
           createdAt: 'desc'
         },
         skip,
-        take: limit
+        take: limitNumber
       }),
       this.prismaClient.feedback.count({ where })
     ]);
@@ -160,8 +162,8 @@ export class FeedbackService {
     return {
       feedback,
       total,
-      page,
-      limit
+      page: pageNumber,
+      limit: limitNumber
     };
   }
 

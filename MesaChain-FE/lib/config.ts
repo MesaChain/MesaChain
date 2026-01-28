@@ -3,7 +3,7 @@ import { z } from 'zod';
 const configSchema = z.object({
   NEXT_PUBLIC_STELLAR_NETWORK: z.enum(['testnet', 'mainnet']).default('testnet'),
   NEXT_PUBLIC_HORIZON_URL: z.string().url().default('https://horizon-testnet.stellar.org'),
-  NEXT_PUBLIC_API_BASE_URL_BACKEND: z.string().url().default('http://localhost:3001'),
+  NEXT_PUBLIC_API_BASE_URL_BACKEND: z.string().url().default('http://localhost:4000'),
   NEXT_PUBLIC_API_BASE_URL_FRONTEND: z.string().url().default('http://localhost:3000'),
 });
 
@@ -12,7 +12,7 @@ try {
   config = configSchema.parse({
     NEXT_PUBLIC_STELLAR_NETWORK: process.env.NEXT_PUBLIC_STELLAR_NETWORK || 'testnet',
     NEXT_PUBLIC_HORIZON_URL: process.env.NEXT_PUBLIC_HORIZON_URL || 'https://horizon-testnet.stellar.org',
-    NEXT_PUBLIC_API_BASE_URL_BACKEND: process.env.NEXT_PUBLIC_API_BASE_URL_BACKEND || 'http://localhost:3001',
+    NEXT_PUBLIC_API_BASE_URL_BACKEND: process.env.NEXT_PUBLIC_API_BASE_URL_BACKEND || 'http://localhost:4000',
     NEXT_PUBLIC_API_BASE_URL_FRONTEND: process.env.NEXT_PUBLIC_API_BASE_URL_FRONTEND || 'http://localhost:3000',
   });
 } catch (error) {
@@ -21,7 +21,7 @@ try {
   config = {
     NEXT_PUBLIC_STELLAR_NETWORK: 'testnet',
     NEXT_PUBLIC_HORIZON_URL: 'https://horizon-testnet.stellar.org',
-    NEXT_PUBLIC_API_BASE_URL_BACKEND: 'http://localhost:3001',
+    NEXT_PUBLIC_API_BASE_URL_BACKEND: 'http://localhost:4000',
     NEXT_PUBLIC_API_BASE_URL_FRONTEND: 'http://localhost:3000',
   };
 }
