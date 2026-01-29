@@ -1,8 +1,8 @@
-import { render, screen, fireEvent } from '@testing-library/react';
-import { useRouter } from 'next/router';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { useRouter } from 'next/navigation';
 import { ReserveButton } from '../ReserveButton';
 
-jest.mock('next/router', () => ({
+jest.mock('next/navigation', () => ({
   useRouter: jest.fn(),
 }));
 
@@ -13,11 +13,13 @@ describe('ReserveButton', () => {
     expect(screen.getByRole('button', { name: /reserve a table/i })).toBeInTheDocument();
   });
 
-  it('navega a /reserve al hacer click', () => {
+  it('navega a /reserve al hacer click', async () => {
     const push = jest.fn();
     (useRouter as jest.Mock).mockReturnValue({ push });
     render(<ReserveButton />);
-    fireEvent.click(screen.getByRole('button', { name: /reserve a table/i }));
+    const button = screen.getByRole('button', { name: /reserve a table/i });
+    await waitFor(() => expect(button).not.toBeDisabled());
+    fireEvent.click(button);
     expect(push).toHaveBeenCalledWith('/reserve');
   });
 }); 
