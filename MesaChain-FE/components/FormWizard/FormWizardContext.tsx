@@ -81,12 +81,12 @@ export function FormWizard({
   } = form;
 
   useEffect(() => {
-    const subscription = watch((values) => {
+    const subscription = form.watch((values) => {
       setFormData((prev) => ({ ...prev, ...values }));
       setIsDirty(true);
     });
     return () => subscription.unsubscribe();
-  }, [watch]);
+  }, [form.watch]);
 
   useEffect(() => {
     const draft = loadDraftFromStorage(draftKey);
