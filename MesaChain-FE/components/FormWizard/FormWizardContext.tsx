@@ -7,10 +7,11 @@ import {
   useMemo,
   useEffect,
   useCallback,
+  type KeyboardEvent,
+  type RefObject,
 } from "react";
-import { useForm } from "react-hook-form";
+import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-
 import type {
   FormWizardProps,
   FormWizardContextValue,
@@ -45,13 +46,14 @@ export function FormWizard({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isValidating, setIsValidating] = useState(false);
   const [stepsWithErrors, setStepsWithErrors] = useState<number[]>([]);
-  const [formData, setFormData] = useState<Record<string, any>>(initialData);
 
-  const focusRef = useRef<HTMLElement | null>(null);
-
+  const formDataRef = useRef<Record<string, any>>(initialData);
+  const [formDataVersion, setFormDataVersion] = useState(0);
+  const formData = formDataRef.current;
+  const focusRef = useRef<HTMLElement>(null);
   const steps = useMemo(
-    () => getActiveSteps(allSteps, formData),
-    [allSteps, formData],
+    () => getActiveSteps(allSteps, formDataRef.current),
+    [allSteps, formDataVersion],
   );
 
   const currentStep = steps[currentStepIndex] || steps[0];
@@ -61,7 +63,7 @@ export function FormWizard({
   const progress = calculateProgress(currentStepIndex, totalSteps);
 
   const form = useForm<Record<string, any>>({
-    defaultValues: formData,
+    defaultValues: initialData,
     ...(currentStep?.validationSchema
       ? {
           resolver: zodResolver(currentStep.validationSchema as any) as any,
@@ -80,30 +82,65 @@ export function FormWizard({
     reset,
   } = form;
 
+  const resetRef = useRef(reset);
+  resetRef.current = reset;
+
+  const watchedValues = useWatch({ control: form.control });
+
   useEffect(() => {
-    const subscription = form.watch((values) => {
-      setFormData((prev) => ({ ...prev, ...values }));
-      setIsDirty(true);
-    });
-    return () => subscription.unsubscribe();
-  }, [form.watch]);
+    const values = (watchedValues ?? {}) as Record<string, any>;
+    const prevData = formDataRef.current;
+
+    const hasChanges = Object.keys(values).some(
+      (key) => values[key] !== prevData[key],
+    );
+    if (!hasChanges) return;
+
+    const nextData = { ...prevData, ...values };
+    formDataRef.current = nextData;
+    setIsDirty(true);
+
+    const prevSteps = getActiveSteps(allSteps, prevData);
+    const nextSteps = getActiveSteps(allSteps, nextData);
+    if (
+      prevSteps.length !== nextSteps.length ||
+      prevSteps.some((s, i) => s.id !== nextSteps[i]?.id)
+    ) {
+      setFormDataVersion((v) => v + 1);
+    }
+  }, [watchedValues, allSteps]);
+
+  const pendingDraftStepIndexRef = useRef<number | null>(null);
 
   useEffect(() => {
     const draft = loadDraftFromStorage(draftKey);
     if (draft && Object.keys(draft.data).length > 0) {
-      setFormData(draft.data);
-      reset(draft.data);
-      if (draft.currentStepIndex < totalSteps) {
-        setCurrentStepIndex(draft.currentStepIndex);
-      }
+      formDataRef.current = draft.data;
+      pendingDraftStepIndexRef.current = draft.currentStepIndex;
+      resetRef.current(draft.data);
+      setFormDataVersion((v) => v + 1);
     }
-  }, [draftKey, reset, totalSteps]);
+  }, [draftKey]);
+
+  useEffect(() => {
+    setCurrentStepIndex((idx) => {
+      const maxIndex = Math.max(totalSteps - 1, 0);
+      const desired = pendingDraftStepIndexRef.current ?? idx;
+      const clamped = Math.min(desired, maxIndex);
+
+      if (pendingDraftStepIndexRef.current !== null) {
+        pendingDraftStepIndexRef.current = null;
+      }
+
+      return clamped === idx ? idx : clamped;
+    });
+  }, [totalSteps]);
 
   useEffect(() => {
     if (isDirty) {
-      saveDraftToStorage(draftKey, formData, currentStepIndex);
+      saveDraftToStorage(draftKey, formDataRef.current, currentStepIndex);
     }
-  }, [currentStepIndex, formData, isDirty, draftKey]);
+  }, [currentStepIndex, formDataVersion, isDirty, draftKey]);
 
   useEffect(() => {
     if (focusRef.current) {
@@ -201,8 +238,9 @@ export function FormWizard({
   const loadDraft = useCallback((): boolean => {
     const draft = loadDraftFromStorage(draftKey);
     if (draft) {
-      setFormData(draft.data);
+      formDataRef.current = draft.data;
       reset(draft.data);
+      setFormDataVersion((v) => v + 1);
       if (draft.currentStepIndex < totalSteps) {
         setCurrentStepIndex(draft.currentStepIndex);
       }
@@ -217,8 +255,9 @@ export function FormWizard({
 
   const resetWizard = useCallback(() => {
     clearDraftFromStorage(draftKey);
-    setFormData(initialData);
+    formDataRef.current = initialData;
     reset(initialData);
+    setFormDataVersion((v) => v + 1);
     setCurrentStepIndex(0);
     setIsDirty(false);
     setStepsWithErrors([]);
@@ -249,7 +288,7 @@ export function FormWizard({
   );
 
   const handleKeyDown = useCallback(
-    (e: React.KeyboardEvent) => {
+    (e: KeyboardEvent) => {
       if (e.key === "Enter" && !e.shiftKey) {
         e.preventDefault();
         nextStep();
