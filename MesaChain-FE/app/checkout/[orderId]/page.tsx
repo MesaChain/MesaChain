@@ -35,7 +35,6 @@ export default function Checkout() {
     const walletHook = useWallet();
     const { walletState, loading: walletLoading, connectWallet, disconnectWallet, signTransaction } = walletHook;
     const [tipAmount, setTipAmount] = useState(0);
-    const [_tipPercentage, setTipPercentage] = useState(18);
     const [billSplits, setBillSplits] = useState<PayerSplit[]>([]);
     const [processingPayment, setProcessingPayment] = useState(false);
     const [stepTransitionComplete, setStepTransitionComplete] = useState(false);
@@ -97,7 +96,7 @@ export default function Checkout() {
 
     const handleTipChange = useCallback((amount: number, percentage: number) => {
         setTipAmount(amount);
-        setTipPercentage(percentage);
+        void percentage;
     }, []);
 
     const handleSplitChange = useCallback((splits: PayerSplit[]) => {
