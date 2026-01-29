@@ -112,7 +112,7 @@ const BasicWizardContent = () => {
   const { register, currentStep } = useFormWizard();
 
   return (
-    <div className="w-[400px] p-6 border rounded-lg">
+    <div className="w-full max-w-md p-6 border rounded-lg">
       <StepIndicator />
       <h2 className="text-xl font-semibold mb-4">{currentStep.title}</h2>
 
@@ -187,7 +187,7 @@ const ValidationContent = () => {
   const { register, errors, currentStep } = useFormWizard();
 
   return (
-    <div className="w-[400px] p-6 border rounded-lg">
+    <div className="w-full max-w-md p-6 border rounded-lg">
       <StepIndicator />
       <h2 className="text-xl font-semibold mb-4">{currentStep.title}</h2>
 
@@ -347,7 +347,7 @@ const ErrorStatesContent = () => {
   const { register, errors, currentStep, stepsWithErrors } = useFormWizard();
 
   return (
-    <div className="w-[400px] p-6 border rounded-lg">
+    <div className="w-full max-w-md p-6 border rounded-lg">
       <StepIndicator />
       <h2 className="text-xl font-semibold mb-4">{currentStep.title}</h2>
 
@@ -503,7 +503,7 @@ const ConditionalStepsContent = () => {
   const hasCoupon = watch("hasCoupon");
 
   return (
-    <div className="w-[400px] p-6 border rounded-lg">
+    <div className="w-full max-w-md p-6 border rounded-lg">
       <StepIndicator />
       <h2 className="text-xl font-semibold mb-4">{currentStep.title}</h2>
 
