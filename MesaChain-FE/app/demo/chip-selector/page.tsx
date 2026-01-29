@@ -50,6 +50,7 @@ export default function ChipSelectorDemo() {
             value={singleValue}
             onChange={setSingleValue}
             mode="single"
+            ariaLabel="Tip amount"
           />
           
           <div className="bg-muted p-3 rounded text-xs font-mono">
@@ -72,6 +73,7 @@ export default function ChipSelectorDemo() {
             onChange={setMultiValue}
             mode="multiple"
             onClear={() => setMultiValue([])}
+            ariaLabel="Dietary filters"
           />
 
           <div className="bg-muted p-3 rounded text-xs font-mono">
@@ -94,6 +96,7 @@ export default function ChipSelectorDemo() {
             onChange={() => {}}
             mode="single"
             isDisabled={true}
+            ariaLabel="Tip amount (disabled)"
           />
         </section>
       </div>

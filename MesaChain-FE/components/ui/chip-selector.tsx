@@ -41,6 +41,8 @@ export interface ChipSelectorProps {
   mode?: "single" | "multiple";
   isDisabled?: boolean;
   onClear?: () => void;
+  ariaLabel?: string;
+  ariaLabelledBy?: string;
   className?: string;
 }
 
@@ -51,6 +53,8 @@ export function ChipSelector({
   mode = "multiple",
   isDisabled = false,
   onClear,
+  ariaLabel,
+  ariaLabelledBy,
   className,
 }: ChipSelectorProps) {
   const chipRefs = React.useRef<(HTMLDivElement | null)[]>([]);
@@ -137,11 +141,14 @@ export function ChipSelector({
   };
 
   const showClear = mode === "multiple" && onClear && Array.isArray(value) && value.length > 0;
+  const resolvedAriaLabel = ariaLabelledBy ? undefined : ariaLabel;
 
   return (
     <div className={cn("flex flex-col gap-2", className)}>
       <div
         role="group"
+        aria-label={resolvedAriaLabel}
+        aria-labelledby={ariaLabelledBy}
         className="flex flex-wrap gap-2"
         aria-disabled={isDisabled}
       >
