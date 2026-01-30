@@ -4,6 +4,7 @@ import { IDBPDatabase, openDB } from "idb";
 const DB_NAME = "MesaChainDB";
 const DB_VERSION = 1;
 
+
 let dbPromise: Promise<IDBPDatabase<MesaChainDBSchema>> | null = null;
 
 const initDB = () => {

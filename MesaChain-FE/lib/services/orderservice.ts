@@ -1,58 +1,77 @@
 
 
- /**
-     * Creates a new order in the local database.
-      * Generates a unique ID and sets initial values.
-      */
-
-import { Order } from "@/types/db";
-import { getDB } from "../db";
 import { v4 as uuidV4 } from "uuid";
+import { getDB } from "../db";
+import { Order, LineItem, PaymentIntent } from "@/types/db";
 
-export const createOrder = async(orderData: Omit<Order, 'id' | 'createdAt' | 'updatedAt' | 'synced' | 'status'>):Promise<Order> =>{
-const db = await getDB()
-const newOrder: Order ={
+export const createOrder = async (
+  orderData: { totalAmount: number; customerName?: string },
+  items: Omit<LineItem, "id" | "orderId">[],
+  paymentMethod: PaymentIntent["paymentMethod"]
+): Promise<Order> => {
+  const db = await getDB();
+  const orderId = uuidV4();
+  const now = new Date().toISOString();
+
+  const newOrder: Order = {
     ...orderData,
-    id: uuidV4(),
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-    status: 'pending',
+    id: orderId,
+    paidAmount: 0,
+    status: "pending",
+    paymentStatus: "unpaid",
+    createdAt: now,
+    updatedAt: now,
     synced: false,
-    customerName: orderData.customerName || ''
-}
+    isLocked: false,
+    version: 1,
+  };
 
-await db.put('orders', newOrder)
-return newOrder
-}
+  const tx = db.transaction(["orders", "LineItems"], "readwrite");
+  await tx.objectStore("orders").put(newOrder);
+  for (const item of items) {
+    await tx.objectStore("LineItems").put({ ...item, id: uuidV4(), orderId });
+  }
+  await tx.done;
+  return newOrder;
+};
 
+export const addPaymentIntent = async (
+  orderId: string, 
+  amount: number, 
+  method: PaymentIntent["paymentMethod"]
+) => {
+  const db = await getDB();
+  const tx = db.transaction(["orders", "PaymentIntent"], "readwrite");
+  const order = await tx.objectStore("orders").get(orderId);
 
-// Retrieves a single order by its ID
+  if (!order || order.isLocked) throw new Error("Order locked or not found");
 
-export const getOrder = async (id: string): Promise<Order | undefined> => {
-    const db = await getDB()
-    return db.get('orders', id)
-}
+  const newPayment: PaymentIntent = {
+    id: uuidV4(),
+    orderId,
+    amount,
+    paymentMethod: method,
+    status: "completed",
+    createdAt: new Date().toISOString(),
+    synced: false,
+    isPartial: amount < (order.totalAmount - order.paidAmount),
+  };
 
-// updates an existing order and Automatically update the 'updatedAt' timestamp
-export const updateOrder = async(order:Order): Promise<Order>=>{
-const db = await getDB()
-const updateOrderData ={
-    ...order,
-    updatedAt: new Date().toISOString(),
-    synced: false
-}
-await db.put('orders', updateOrderData)
-return updateOrderData
-}
+  order.paidAmount += amount;
+  order.paymentStatus = order.paidAmount >= order.totalAmount ? "paid" : "partial";
+  order.updatedAt = new Date().toISOString();
+  order.version += 1;
+  if (order.paymentStatus === "paid") {
+    order.status = "completed";
+    order.isLocked = true; 
+  }
 
-//Deletes an order from the local database
-export const deleteOrder = async(id: string): Promise<void>=>{
-const db = await getDB()
-await db.delete('orders', id)
-}
+  await tx.objectStore("PaymentIntent").put(newPayment);
+  await tx.objectStore("orders").put(order);
+  await tx.done;
+};
 
-//Retrieves all unsynced orders, this is crucial for the sync manager
-export const getUnsyncedOrders = async(): Promise<Order[]>=>{
-const db = await getDB()
-return db.getAllFromIndex('orders', 'by-synced', false)
-}
+export const getUnsyncedOrders = async () => {
+  const db = await getDB();
+  return db.getAllFromIndex("orders", "by-synced", 0);
+};
