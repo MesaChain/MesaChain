@@ -59,6 +59,8 @@ export const addPaymentIntent = async (
 
   order.paidAmount += amount;
   order.paymentStatus = order.paidAmount >= order.totalAmount ? "paid" : "partial";
+  order.updatedAt = new Date().toISOString();
+  order.version += 1;
   if (order.paymentStatus === "paid") {
     order.status = "completed";
     order.isLocked = true; 
