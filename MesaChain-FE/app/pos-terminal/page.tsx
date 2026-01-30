@@ -82,6 +82,15 @@ export default function PosTerminalPage() {
   }
 
   const handleConfirmPayment = async () => {
+    const amount = parseFloat(paymentAmount);
+    if (isNaN(amount) || amount <= 0) {
+      addLog("Error: Invalid payment amount.");
+      return;
+    }
+    if (amount > total * 2) { // Reasonable upper bound check
+      addLog("Error: Payment amount seems too high.");
+      return;
+    }
     try {
       const orderData = {
         totalAmount: total,
@@ -99,7 +108,7 @@ export default function PosTerminalPage() {
       const newOrder = await createOrder(orderData, itemsData, paymentMethod)
       
       
-      await addPaymentIntent(newOrder.id, parseFloat(paymentAmount), paymentMethod)
+      await addPaymentIntent(newOrder.id, amount, paymentMethod)
       
       addLog(`Success: Order ${newOrder.id.slice(0,8)} paid and locked.`)
       setCurrentOrder([])
