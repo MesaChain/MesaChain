@@ -57,3 +57,5 @@ yarn.lock
 # Added from the code block
 *.swp
 *.swo 
+*storybook.log
+storybook-static
