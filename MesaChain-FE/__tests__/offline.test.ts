@@ -8,8 +8,9 @@ import { getDB } from '../lib/db';
 describe('POS Offline Logic ', () => {
   beforeEach(async () => {
     const db = await getDB();
-    const tx = db.transaction(['orders', 'PaymentIntent'], 'readwrite');
+    const tx = db.transaction(['orders', 'LineItems', 'PaymentIntent'], 'readwrite');
     await tx.objectStore('orders').clear();
+    await tx.objectStore('LineItems').clear();
     await tx.objectStore('PaymentIntent').clear();
     await tx.done;
   });
