@@ -323,7 +323,7 @@ const ValidationContent = () => {
 
       <FormStep stepId="confirm" className="space-y-4">
         <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
-          <h3 className="font-medium text-green-800 mb-2">✓ All Valid</h3>
+          <h3 className="font-medium text-green-800 mb-2"> All Valid</h3>
           <p className="text-sm text-green-700">
             All validation passed. You can now submit the form.
           </p>
@@ -394,7 +394,7 @@ const ErrorStatesContent = () => {
       {stepsWithErrors.length > 0 && (
         <div className="mb-4 p-3 bg-destructive/10 border border-destructive/20 rounded-md">
           <p className="text-sm font-medium text-destructive">
-            ⚠ Steps with errors: {stepsWithErrors.map((i) => i + 1).join(", ")}
+            Steps with errors: {stepsWithErrors.map((i) => i + 1).join(", ")}
           </p>
         </div>
       )}
@@ -402,7 +402,7 @@ const ErrorStatesContent = () => {
       <FormStep stepId="required" className="space-y-4">
         <div className="p-3 bg-amber-50 border border-amber-200 rounded-md mb-4">
           <p className="text-sm text-amber-800">
-            💡 Click "Next" without filling fields to see error states. The step
+            Click "Next" without filling fields to see error states. The step
             indicator will turn red.
           </p>
         </div>
@@ -557,8 +557,7 @@ const ConditionalStepsContent = () => {
 
       <div className="mb-4 p-3 bg-secondary border border-border rounded-md">
         <p className="text-sm text-secondary-foreground">
-          📋 Active steps: {steps.length} (
-          {steps.map((s) => s.title).join(" → ")})
+          Active steps: {steps.length} ({steps.map((s) => s.title).join(" → ")})
         </p>
       </div>
 
@@ -589,7 +588,7 @@ const ConditionalStepsContent = () => {
             }
           />
           <Label htmlFor="needsShipping" className="font-normal cursor-pointer">
-            I need physical shipping 📦
+            I need physical shipping
           </Label>
         </div>
         <div className="flex items-center space-x-2">
@@ -601,7 +600,7 @@ const ConditionalStepsContent = () => {
             }
           />
           <Label htmlFor="hasCoupon" className="font-normal cursor-pointer">
-            I have a coupon code 🎟️
+            I have a coupon code
           </Label>
         </div>
       </FormStep>
@@ -609,8 +608,7 @@ const ConditionalStepsContent = () => {
       <FormStep stepId="shipping" className="space-y-4">
         <div className="p-3 bg-accent border border-border rounded-md mb-4">
           <p className="text-sm text-accent-foreground">
-            🚚 This step only appears when "I need physical shipping" is
-            checked.
+            This step only appears when "I need physical shipping" is checked.
           </p>
         </div>
         <div className="space-y-2">
@@ -644,7 +642,7 @@ const ConditionalStepsContent = () => {
       <FormStep stepId="coupon" className="space-y-4">
         <div className="p-3 bg-accent border border-border rounded-md mb-4">
           <p className="text-sm text-accent-foreground">
-            🎟️ This step only appears when "I have a coupon code" is checked.
+            This step only appears when "I have a coupon code" is checked.
           </p>
         </div>
         <div className="space-y-2">
