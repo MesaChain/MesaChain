@@ -1,11 +1,17 @@
 import type { WizardStep } from "./types";
 
+/**
+ * Draft data structure stored in localStorage
+ */
 interface DraftData {
   data: Record<string, any>;
   timestamp: number;
   currentStepIndex: number;
 }
 
+/**
+ * Safely read draft from localStorage
+ */
 export function loadDraftFromStorage(key: string): DraftData | null {
   if (typeof window === "undefined") return null;
 
@@ -15,13 +21,16 @@ export function loadDraftFromStorage(key: string): DraftData | null {
 
     const parsed = JSON.parse(stored) as DraftData;
 
+    // Validate structure
     if (
       typeof parsed === "object" &&
       parsed !== null &&
       "data" in parsed &&
-      "timestamp" in parsed
+      "timestamp" in parsed &&
+      typeof (parsed as DraftData).currentStepIndex === "number" &&
+      Number.isFinite((parsed as DraftData).currentStepIndex)
     ) {
-      return parsed;
+      return parsed as DraftData;
     }
 
     return null;
@@ -31,6 +40,9 @@ export function loadDraftFromStorage(key: string): DraftData | null {
   }
 }
 
+/**
+ * Safely save draft to localStorage
+ */
 export function saveDraftToStorage(
   key: string,
   data: Record<string, any>,
@@ -51,6 +63,9 @@ export function saveDraftToStorage(
   }
 }
 
+/**
+ * Clear draft from localStorage
+ */
 export function clearDraftFromStorage(key: string): void {
   if (typeof window === "undefined") return;
 
@@ -60,6 +75,10 @@ export function clearDraftFromStorage(key: string): void {
     console.warn(`[FormWizard] Failed to clear draft from "${key}":`, error);
   }
 }
+
+/**
+ * Filter steps based on their condition functions
+ */
 export function getActiveSteps(
   steps: WizardStep[],
   formData: Record<string, any>,
@@ -69,6 +88,10 @@ export function getActiveSteps(
     return step.condition(formData);
   });
 }
+
+/**
+ * Calculate progress percentage (0-100)
+ */
 export function calculateProgress(
   currentIndex: number,
   totalSteps: number,
@@ -77,6 +100,9 @@ export function calculateProgress(
   return Math.round((currentIndex / (totalSteps - 1)) * 100);
 }
 
+/**
+ * Generate ARIA label for progress indicator
+ */
 export function getProgressAriaLabel(
   currentIndex: number,
   totalSteps: number,
@@ -84,6 +110,10 @@ export function getProgressAriaLabel(
 ): string {
   return `Step ${currentIndex + 1} of ${totalSteps}: ${currentStepTitle}. Progress: ${calculateProgress(currentIndex, totalSteps)}%`;
 }
+
+/**
+ * Generate ARIA label for a specific step
+ */
 export function getStepAriaLabel(
   step: WizardStep,
   index: number,
@@ -102,9 +132,16 @@ export function getStepAriaLabel(
   return `Step ${index + 1}: ${step.title}, ${status}${errorSuffix}`;
 }
 
+/**
+ * Find the index of a step by ID
+ */
 export function findStepIndexById(steps: WizardStep[], stepId: string): number {
   return steps.findIndex((step) => step.id === stepId);
 }
+
+/**
+ * Check if a step is currently active (visible)
+ */
 export function isStepActive(stepId: string, currentStep: WizardStep): boolean {
   return currentStep.id === stepId;
 }

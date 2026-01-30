@@ -41,18 +41,31 @@ export function FormWizard({
   draftKey = DEFAULT_DRAFT_KEY,
   children,
 }: FormWizardProps) {
+  // Core state
   const [currentStepIndex, setCurrentStepIndex] = useState(0);
   const [isDirty, setIsDirty] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isValidating, setIsValidating] = useState(false);
   const [stepsWithErrors, setStepsWithErrors] = useState<number[]>([]);
 
+  // Use a ref to store form data to avoid re-render loops
+  // The ref holds the "source of truth" for conditional step evaluation
   const formDataRef = useRef<Record<string, any>>(initialData);
+
+  // This state is only used to trigger re-renders when form data changes
+  // It's updated in a controlled way to prevent infinite loops
   const [formDataVersion, setFormDataVersion] = useState(0);
+
+  // Derived formData for context consumers (reads from ref)
   const formData = formDataRef.current;
+
+  // Focus ref for accessibility
   const focusRef = useRef<HTMLElement>(null);
+
+  // Get active steps based on conditions - uses ref to avoid loop
   const steps = useMemo(
     () => getActiveSteps(allSteps, formDataRef.current),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     [allSteps, formDataVersion],
   );
 
@@ -62,6 +75,7 @@ export function FormWizard({
   const isLastStep = currentStepIndex === totalSteps - 1;
   const progress = calculateProgress(currentStepIndex, totalSteps);
 
+  // React Hook Form setup - use initialData directly, not formData state
   const form = useForm<Record<string, any>>({
     defaultValues: initialData,
     ...(currentStep?.validationSchema
@@ -82,15 +96,18 @@ export function FormWizard({
     reset,
   } = form;
 
+  // Keep a ref to the latest reset() so draft-loading doesn't re-run due to reset identity changes.
   const resetRef = useRef(reset);
   resetRef.current = reset;
 
+  // Prefer useWatch over form.watch() subscriptions to avoid re-subscribe loops.
   const watchedValues = useWatch({ control: form.control });
 
   useEffect(() => {
     const values = (watchedValues ?? {}) as Record<string, any>;
     const prevData = formDataRef.current;
 
+    // Only update if values have actually changed (shallow comparison)
     const hasChanges = Object.keys(values).some(
       (key) => values[key] !== prevData[key],
     );
@@ -100,6 +117,7 @@ export function FormWizard({
     formDataRef.current = nextData;
     setIsDirty(true);
 
+    // Only trigger re-render if step visibility changed
     const prevSteps = getActiveSteps(allSteps, prevData);
     const nextSteps = getActiveSteps(allSteps, nextData);
     if (
@@ -110,8 +128,10 @@ export function FormWizard({
     }
   }, [watchedValues, allSteps]);
 
+  // If a draft wants to restore a step index, we apply it once steps are known.
   const pendingDraftStepIndexRef = useRef<number | null>(null);
 
+  // Load draft on mount
   useEffect(() => {
     const draft = loadDraftFromStorage(draftKey);
     if (draft && Object.keys(draft.data).length > 0) {
@@ -122,6 +142,7 @@ export function FormWizard({
     }
   }, [draftKey]);
 
+  // Clamp current step when conditional steps change, and apply draft step index once.
   useEffect(() => {
     setCurrentStepIndex((idx) => {
       const maxIndex = Math.max(totalSteps - 1, 0);
@@ -137,17 +158,21 @@ export function FormWizard({
   }, [totalSteps]);
 
   useEffect(() => {
-    if (isDirty) {
+    if (!isDirty) return;
+    const timeoutId = setTimeout(() => {
       saveDraftToStorage(draftKey, formDataRef.current, currentStepIndex);
-    }
-  }, [currentStepIndex, formDataVersion, isDirty, draftKey]);
+    }, 300);
+    return () => clearTimeout(timeoutId);
+  }, [watchedValues, currentStepIndex, formDataVersion, isDirty, draftKey]);
 
+  // Focus management on step change
   useEffect(() => {
     if (focusRef.current) {
       focusRef.current.focus();
     }
   }, [currentStepIndex]);
 
+  // Validate current step
   const validateCurrentStep = useCallback(async (): Promise<boolean> => {
     if (!currentStep?.validationSchema) {
       return true;
@@ -158,10 +183,12 @@ export function FormWizard({
       const isValid = await trigger();
 
       if (!isValid) {
+        // Track this step as having errors
         setStepsWithErrors((prev) =>
           prev.includes(currentStepIndex) ? prev : [...prev, currentStepIndex],
         );
       } else {
+        // Remove from error list
         setStepsWithErrors((prev) =>
           prev.filter((idx) => idx !== currentStepIndex),
         );
@@ -173,11 +200,14 @@ export function FormWizard({
     }
   }, [currentStep?.validationSchema, trigger, currentStepIndex]);
 
+  // Navigation: Next step
   const nextStep = useCallback(async (): Promise<boolean> => {
+    if (totalSteps === 0) return false;
     const isValid = await validateCurrentStep();
     if (!isValid) return false;
 
     if (isLastStep) {
+      // Final submission
       setIsSubmitting(true);
       try {
         await onComplete(formData);
@@ -192,6 +222,7 @@ export function FormWizard({
       }
     }
 
+    // Proceed to next step
     setCurrentStepIndex((prev) => Math.min(prev + 1, totalSteps - 1));
     return true;
   }, [
@@ -203,14 +234,17 @@ export function FormWizard({
     totalSteps,
   ]);
 
+  // Navigation: Previous step
   const prevStep = useCallback(() => {
     setCurrentStepIndex((prev) => Math.max(prev - 1, 0));
   }, []);
 
+  // Navigation: Go to specific step
   const goToStep = useCallback(
     async (index: number): Promise<boolean> => {
       if (index < 0 || index >= totalSteps) return false;
 
+      // If going forward, validate current step first
       if (index > currentStepIndex) {
         const isValid = await validateCurrentStep();
         if (!isValid) return false;
@@ -222,14 +256,17 @@ export function FormWizard({
     [totalSteps, currentStepIndex, validateCurrentStep],
   );
 
+  // Check if can navigate to step
   const canGoToStep = useCallback(
     (index: number): boolean => {
       if (index < 0 || index >= totalSteps) return false;
+      // Can always go back, but can only go forward one step at a time
       return index <= currentStepIndex + 1;
     },
     [totalSteps, currentStepIndex],
   );
 
+  // Draft management
   const saveDraft = useCallback(() => {
     saveDraftToStorage(draftKey, formData, currentStepIndex);
     onSaveDraft?.(formData);
@@ -263,6 +300,7 @@ export function FormWizard({
     setStepsWithErrors([]);
   }, [draftKey, initialData, reset]);
 
+  // Accessibility helpers
   const getProgressAriaLabel = useCallback(
     () =>
       getProgressAriaLabelUtil(
@@ -287,6 +325,7 @@ export function FormWizard({
     [steps, currentStepIndex, stepsWithErrors],
   );
 
+  // Keyboard navigation
   const handleKeyDown = useCallback(
     (e: KeyboardEvent) => {
       if (e.key === "Enter" && !e.shiftKey) {
@@ -306,49 +345,64 @@ export function FormWizard({
     [nextStep, isDirty, saveDraft],
   );
 
+  // Confirm exit helper
   const confirmExit = useCallback((): boolean => {
     if (!isDirty) return true;
     if (typeof window === "undefined") return true;
     const shouldExit = window.confirm(
-      "You have unsaved changes. Would you like to save as draft before leaving?",
+      "You have unsaved changes. Save as draft and leave? (Cancel to stay)",
     );
-    if (shouldExit) {
-      saveDraft();
-    }
+    if (!shouldExit) return false;
+    saveDraft();
     return true;
   }, [isDirty, saveDraft]);
 
   const contextValue: FormWizardContextValue = {
+    // State
     currentStep,
     currentStepIndex,
     steps,
     totalSteps,
     formData,
     progress,
+
+    // Flags
     isFirstStep,
     isLastStep,
     isDirty,
     isSubmitting,
     isValidating,
     stepsWithErrors,
+
+    // Navigation
     nextStep,
     prevStep,
     goToStep,
     canGoToStep,
+
+    // Draft management
     saveDraft,
     loadDraft,
     clearDraft,
     resetWizard,
+
+    // Form integration
     register,
     watch,
     setValue,
     getValues,
     errors,
+
+    // Accessibility
     getProgressAriaLabel,
     getStepAriaLabel,
     focusRef,
     handleKeyDown,
+
+    // UX
     confirmExit,
+
+    // Additional context
     allSteps,
     draftKey,
     onSaveDraft,

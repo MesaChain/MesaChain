@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/react";
-
+import { fn } from "@storybook/test";
 import { z } from "zod";
 import { FormWizard, FormStep, useFormWizard } from "./index";
 import { Input } from "@/components/ui/input";
@@ -13,11 +13,22 @@ const meta: Meta<typeof FormWizard> = {
   component: FormWizard,
   parameters: {
     layout: "centered",
+    docs: {
+      description: {
+        component:
+          "A headless wizard/stepper component with validation, draft persistence, and accessibility support.",
+      },
+    },
   },
+  tags: ["autodocs"],
 };
 
 export default meta;
 type Story = StoryObj<typeof FormWizard>;
+
+// ============================================================================
+// Shared Components
+// ============================================================================
 
 function StepIndicator() {
   const { steps, currentStepIndex, stepsWithErrors, goToStep, canGoToStep } =
@@ -96,6 +107,10 @@ function WizardNavigation() {
   );
 }
 
+// ============================================================================
+// Validation Schemas
+// ============================================================================
+
 const personalInfoSchema = z.object({
   firstName: z.string().min(2, "First name must be at least 2 characters"),
   lastName: z.string().min(2, "Last name must be at least 2 characters"),
@@ -107,6 +122,15 @@ const addressSchema = z.object({
   city: z.string().min(2, "City is required"),
   zipCode: z.string().regex(/^\d{5}$/, "Please enter a valid 5-digit zip code"),
 });
+
+const preferencesSchema = z.object({
+  newsletter: z.boolean().optional(),
+  notifications: z.boolean().optional(),
+});
+
+// ============================================================================
+// Story 1: Basic Wizard
+// ============================================================================
 
 const BasicWizardContent = () => {
   const { register, currentStep } = useFormWizard();
@@ -164,24 +188,32 @@ const BasicWizardContent = () => {
   );
 };
 
+/**
+ * Basic three-step wizard without validation.
+ * Demonstrates simple step navigation with progress indicator.
+ */
 export const BasicWizard: Story = {
-  render: () => (
+  args: {
+    onComplete: fn(),
+  },
+  render: (args) => (
     <FormWizard
       steps={[
         { id: "step1", title: "Personal Info" },
         { id: "step2", title: "Contact Details" },
         { id: "step3", title: "Review" },
       ]}
-      onComplete={(data) => {
-        console.log("Form submitted:", data);
-        alert("Form submitted!\n\n" + JSON.stringify(data, null, 2));
-      }}
+      onComplete={args.onComplete}
       draftKey="storybook-basic-wizard"
     >
       <BasicWizardContent />
     </FormWizard>
   ),
 };
+
+// ============================================================================
+// Story 2: Validation
+// ============================================================================
 
 const ValidationContent = () => {
   const { register, errors, currentStep } = useFormWizard();
@@ -305,8 +337,15 @@ const ValidationContent = () => {
   );
 };
 
+/**
+ * Wizard with per-step Zod validation.
+ * Users cannot proceed until all fields pass validation.
+ */
 export const Validation: Story = {
-  render: () => (
+  args: {
+    onComplete: fn(),
+  },
+  render: (args) => (
     <FormWizard
       steps={[
         {
@@ -324,10 +363,7 @@ export const Validation: Story = {
           title: "Confirmation",
         },
       ]}
-      onComplete={(data) => {
-        console.log("Validated form submitted:", data);
-        alert("All validations passed!\n\n" + JSON.stringify(data, null, 2));
-      }}
+      onComplete={args.onComplete}
       draftKey="storybook-validation-wizard"
     >
       <ValidationContent />
@@ -342,6 +378,10 @@ export const Validation: Story = {
     },
   },
 };
+
+// ============================================================================
+// Story 3: Error States
+// ============================================================================
 
 const ErrorStatesContent = () => {
   const { register, errors, currentStep, stepsWithErrors } = useFormWizard();
@@ -455,8 +495,15 @@ const ErrorStatesContent = () => {
   );
 };
 
+/**
+ * Demonstrates error state handling and visual feedback.
+ * Shows how validation errors affect step indicators.
+ */
 export const ErrorStates: Story = {
-  render: () => (
+  args: {
+    onComplete: fn(),
+  },
+  render: (args) => (
     <FormWizard
       steps={[
         {
@@ -477,10 +524,7 @@ export const ErrorStates: Story = {
           title: "Summary",
         },
       ]}
-      onComplete={(data) => {
-        console.log("Form submitted:", data);
-        alert("Success!");
-      }}
+      onComplete={args.onComplete}
       draftKey="storybook-error-states"
     >
       <ErrorStatesContent />
@@ -496,6 +540,10 @@ export const ErrorStates: Story = {
   },
 };
 
+// ============================================================================
+// Story 4: Conditional Steps
+// ============================================================================
+
 const ConditionalStepsContent = () => {
   const { register, errors, currentStep, watch, steps, setValue } =
     useFormWizard();
@@ -507,8 +555,8 @@ const ConditionalStepsContent = () => {
       <StepIndicator />
       <h2 className="text-xl font-semibold mb-4">{currentStep.title}</h2>
 
-      <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-md">
-        <p className="text-sm text-blue-800">
+      <div className="mb-4 p-3 bg-secondary border border-border rounded-md">
+        <p className="text-sm text-secondary-foreground">
           📋 Active steps: {steps.length} (
           {steps.map((s) => s.title).join(" → ")})
         </p>
@@ -541,7 +589,7 @@ const ConditionalStepsContent = () => {
             }
           />
           <Label htmlFor="needsShipping" className="font-normal cursor-pointer">
-            I need physical shipping
+            I need physical shipping 📦
           </Label>
         </div>
         <div className="flex items-center space-x-2">
@@ -553,15 +601,16 @@ const ConditionalStepsContent = () => {
             }
           />
           <Label htmlFor="hasCoupon" className="font-normal cursor-pointer">
-            I have a coupon code
+            I have a coupon code 🎟️
           </Label>
         </div>
       </FormStep>
 
       <FormStep stepId="shipping" className="space-y-4">
-        <div className="p-3 bg-amber-50 border border-amber-200 rounded-md mb-4">
-          <p className="text-sm text-amber-800">
-            This step only appears when "I need physical shipping" is checked.
+        <div className="p-3 bg-accent border border-border rounded-md mb-4">
+          <p className="text-sm text-accent-foreground">
+            🚚 This step only appears when "I need physical shipping" is
+            checked.
           </p>
         </div>
         <div className="space-y-2">
@@ -593,9 +642,9 @@ const ConditionalStepsContent = () => {
       </FormStep>
 
       <FormStep stepId="coupon" className="space-y-4">
-        <div className="p-3 bg-green-50 border border-green-200 rounded-md mb-4">
-          <p className="text-sm text-green-800">
-            This step only appears when "I have a coupon code" is checked.
+        <div className="p-3 bg-accent border border-border rounded-md mb-4">
+          <p className="text-sm text-accent-foreground">
+            🎟️ This step only appears when "I have a coupon code" is checked.
           </p>
         </div>
         <div className="space-y-2">
@@ -635,8 +684,15 @@ const ConditionalStepsContent = () => {
   );
 };
 
+/**
+ * Steps can be conditionally shown/hidden based on form data.
+ * Toggle checkboxes to see steps dynamically appear/disappear.
+ */
 export const ConditionalSteps: Story = {
-  render: () => (
+  args: {
+    onComplete: fn(),
+  },
+  render: (args) => (
     <FormWizard
       steps={[
         {
@@ -670,10 +726,7 @@ export const ConditionalSteps: Story = {
           title: "Review",
         },
       ]}
-      onComplete={(data) => {
-        console.log("Order submitted:", data);
-        alert("Order placed!\n\n" + JSON.stringify(data, null, 2));
-      }}
+      onComplete={args.onComplete}
       draftKey="storybook-conditional-steps"
     >
       <ConditionalStepsContent />

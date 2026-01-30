@@ -25,6 +25,6 @@ const config: StorybookConfig = {
     getAbsolutePath("@storybook/addon-onboarding"),
   ],
   framework: getAbsolutePath("@storybook/nextjs-vite"),
-  staticDirs: ["..\\public"],
+  staticDirs: ["../public"],
 };
 export default config;
