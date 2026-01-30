@@ -13,14 +13,7 @@ const meta: Meta<typeof FormWizard> = {
   component: FormWizard,
   parameters: {
     layout: "centered",
-    docs: {
-      description: {
-        component:
-          "A headless wizard/stepper component with validation, draft persistence, and accessibility support.",
-      },
-    },
   },
-  tags: ["autodocs"],
 };
 
 export default meta;
@@ -31,8 +24,14 @@ type Story = StoryObj<typeof FormWizard>;
 // ============================================================================
 
 function StepIndicator() {
-  const { steps, currentStepIndex, stepsWithErrors, goToStep, canGoToStep } =
-    useFormWizard();
+  const {
+    steps,
+    currentStepIndex,
+    stepsWithErrors,
+    goToStep,
+    canGoToStep,
+    getStepAriaLabel,
+  } = useFormWizard();
 
   return (
     <div className="flex gap-2 mb-6">
@@ -47,6 +46,8 @@ function StepIndicator() {
             type="button"
             onClick={() => goToStep(index)}
             disabled={!canGoToStep(index)}
+            aria-label={getStepAriaLabel(index)}
+            aria-current={isActive ? "step" : undefined}
             className={`
               flex items-center justify-center w-8 h-8 rounded-full text-sm font-medium
               transition-colors
@@ -73,6 +74,7 @@ function WizardNavigation() {
     isFirstStep,
     isLastStep,
     isSubmitting,
+    isValidating,
     nextStep,
     prevStep,
     getProgressAriaLabel,
@@ -98,9 +100,17 @@ function WizardNavigation() {
         <Button
           type="button"
           onClick={() => nextStep()}
-          disabled={isSubmitting}
+          disabled={isSubmitting || isValidating}
         >
-          {isLastStep ? (isSubmitting ? "Submitting..." : "Submit") : "Next"}
+          {isLastStep
+            ? isSubmitting
+              ? "Submitting..."
+              : isValidating
+                ? "Validating..."
+                : "Submit"
+            : isValidating
+              ? "Validating..."
+              : "Next"}
         </Button>
       </div>
     </div>
