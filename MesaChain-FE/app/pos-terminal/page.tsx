@@ -1,8 +1,14 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
+import { Input } from "@/components/ui/input"
+import { X } from "lucide-react"
+import { createOrder, addPaymentIntent } from "@/lib/services/orderservice"
+import { syncOfflineData } from "@/lib/syncManager"
+import { useNetworkStatus } from "@/hooks/useNetworkStatus"
+import { PaymentIntent as DBPaymentIntent } from "@/types/db"
 
 interface Product {
   id: string
@@ -25,15 +31,35 @@ const products: Product[] = [
   { id: "8", name: "Sandwich", price: 6.5 },
 ]
 
-const syncLogs = [
-  { time: "8:05:44 PM", message: "No new data to sync." },
-  { time: "8:05:44 PM", message: "Starting synchronization..." },
-  { time: "8:05:44 PM", message: "Connection restored. System is online." },
-  { time: "8:05:44 PM", message: "Product catalog seeded." },
-]
-
-export default function Component() {
+export default function PosTerminalPage() {
   const [currentOrder, setCurrentOrder] = useState<OrderItem[]>([])
+  const [logs, setLogs] = useState<{time: string, message: string}[]>([])
+  const [mounted, setMounted] = useState(false)
+  
+  
+  const [isPayModalOpen, setIsPayModalOpen] = useState(false)
+  const [paymentAmount, setPaymentAmount] = useState<string>("0")
+  const [paymentMethod, setPaymentMethod] = useState<DBPaymentIntent['paymentMethod']>('cash')
+  
+  const isOnline = useNetworkStatus()
+  const total = currentOrder.reduce((sum, item) => sum + item.price * item.quantity, 0)
+
+  useEffect(() => {
+    setMounted(true)
+    setLogs([{ 
+      time: new Date().toLocaleTimeString(), 
+      message: "Product catalog seeded." 
+    }])
+  }, [])
+
+  
+  useEffect(() => {
+    setPaymentAmount(total.toFixed(2))
+  }, [total])
+
+  const addLog = (message: string) => {
+    setLogs(prev => [{ time: new Date().toLocaleTimeString(), message }, ...prev])
+  }
 
   const addToOrder = (product: Product) => {
     setCurrentOrder((prev) => {
@@ -55,11 +81,46 @@ export default function Component() {
     })
   }
 
-  const clearOrder = () => {
-    setCurrentOrder([])
+  const handleConfirmPayment = async () => {
+    try {
+      const orderData = {
+        totalAmount: total,
+        customerName: "Walk-in Customer",
+      }
+
+      const itemsData = currentOrder.map(item => ({
+        menuItemId: item.id, 
+        name: item.name,
+        price: item.price,
+        quantity: item.quantity
+      }))
+
+      
+      const newOrder = await createOrder(orderData, itemsData, paymentMethod)
+      
+      
+      await addPaymentIntent(newOrder.id, parseFloat(paymentAmount), paymentMethod)
+      
+      addLog(`Success: Order ${newOrder.id.slice(0,8)} paid and locked.`)
+      setCurrentOrder([])
+      setIsPayModalOpen(false)
+    } catch (error) {
+      addLog("Error processing payment transaction.")
+      console.error(error)
+    }
   }
 
-  const total = currentOrder.reduce((sum, item) => sum + item.price * item.quantity, 0)
+  const handleSync = async () => {
+    if (!isOnline) return
+    addLog("Starting synchronization...")
+    try {
+      await syncOfflineData(addLog)
+    } catch (error) {
+      addLog("Synchronization failure.")
+    }
+  }
+
+  if (!mounted) return null
 
   return (
     <div className="min-h-screen bg-gray-50 p-4">
@@ -69,10 +130,16 @@ export default function Component() {
           <h1 className="text-2xl font-bold text-gray-900">POS Terminal</h1>
           <div className="flex items-center gap-4">
             <div className="flex items-center gap-2">
-              <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-              <span className="text-sm text-gray-600">Online</span>
+              <div className={`w-2 h-2 rounded-full ${isOnline ? 'bg-green-500' : 'bg-red-500'}`}></div>
+              <span className="text-sm text-gray-600">{isOnline ? 'Online' : 'Offline'}</span>
             </div>
-            <Button className="bg-blue-600 hover:bg-blue-700">Sync Now</Button>
+            <Button 
+              className="bg-blue-600 hover:bg-blue-700"
+              onClick={handleSync}
+              disabled={!isOnline}
+            >
+              Sync Now
+            </Button>
           </div>
         </div>
 
@@ -101,12 +168,12 @@ export default function Component() {
             </div>
           </div>
 
-          {/* Current Order Section */}
+          
           <div className="lg:col-span-1">
             <div className="bg-white rounded-lg shadow-sm p-6">
               <div className="flex items-center justify-between mb-4">
                 <h2 className="text-lg font-semibold text-gray-900">Current Order</h2>
-                <Button variant="destructive" size="sm" onClick={clearOrder} className="bg-red-500 hover:bg-red-600">
+                <Button variant="destructive" size="sm" onClick={() => setCurrentOrder([])} className="bg-red-500 hover:bg-red-600">
                   New Order
                 </Button>
               </div>
@@ -127,29 +194,9 @@ export default function Component() {
                           </div>
                         </div>
                         <div className="flex items-center gap-2">
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={(e) => {
-                              e.stopPropagation()
-                              removeFromOrder(item.id)
-                            }}
-                            className="h-6 w-6 p-0"
-                          >
-                            -
-                          </Button>
+                          <Button size="sm" variant="outline" onClick={() => removeFromOrder(item.id)} className="h-6 w-6 p-0">-</Button>
                           <span className="text-sm w-8 text-center">{item.quantity}</span>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={(e) => {
-                              e.stopPropagation()
-                              addToOrder(item)
-                            }}
-                            className="h-6 w-6 p-0"
-                          >
-                            +
-                          </Button>
+                          <Button size="sm" variant="outline" onClick={() => addToOrder(item)} className="h-6 w-6 p-0">+</Button>
                         </div>
                       </div>
                     ))}
@@ -162,7 +209,11 @@ export default function Component() {
                   <span className="font-semibold text-gray-900">Total:</span>
                   <span className="font-bold text-lg">${total.toFixed(2)}</span>
                 </div>
-                <Button className="w-full bg-gray-400 hover:bg-gray-500" disabled={currentOrder.length === 0}>
+                <Button 
+                  className={`w-full ${currentOrder.length > 0 ? 'bg-green-600 hover:bg-green-700' : 'bg-gray-400'}`}
+                  disabled={currentOrder.length === 0}
+                  onClick={() => setIsPayModalOpen(true)}
+                >
                   Proceed to Payment
                 </Button>
               </div>
@@ -170,11 +221,11 @@ export default function Component() {
           </div>
         </div>
 
-        {/* Sync Log Section */}
+        
         <div className="mt-6 bg-white rounded-lg shadow-sm p-6">
           <h2 className="text-lg font-semibold text-gray-900 mb-4">Sync Log</h2>
-          <div className="space-y-1">
-            {syncLogs.map((log, index) => (
+          <div className="space-y-1 max-h-40 overflow-y-auto">
+            {logs.map((log, index) => (
               <div key={index} className="text-sm">
                 <span className="text-blue-600 font-mono">[{log.time}]</span>
                 <span className="text-gray-700 ml-2">{log.message}</span>
@@ -183,6 +234,49 @@ export default function Component() {
           </div>
         </div>
       </div>
+
+      
+      {isPayModalOpen && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+          <Card className="w-full max-w-md p-6 space-y-4 shadow-xl">
+            <div className="flex justify-between items-center border-b pb-2">
+              <h3 className="text-xl font-bold">Complete Payment</h3>
+              <X className="cursor-pointer" onClick={() => setIsPayModalOpen(false)} />
+            </div>
+            
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Confirm Amount</label>
+              <Input 
+                type="number" 
+                value={paymentAmount} 
+                onChange={(e) => setPaymentAmount(e.target.value)}
+                className="text-lg font-bold"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Select Payment Method</label>
+              <div className="grid grid-cols-3 gap-2">
+                {(['cash', 'stellar', 'credit_card'] as const).map((method) => (
+                  <Button
+                    key={method}
+                    variant={paymentMethod === method ? 'default' : 'outline'}
+                    size="sm"
+                    onClick={() => setPaymentMethod(method)}
+                    className="capitalize text-xs"
+                  >
+                    {method.replace('_', ' ')}
+                  </Button>
+                ))}
+              </div>
+            </div>
+
+            <Button className="w-full bg-green-600 hover:bg-green-700 py-6 text-lg font-bold mt-4" onClick={handleConfirmPayment}>
+              Confirm & Finalize Order
+            </Button>
+          </Card>
+        </div>
+      )}
     </div>
   )
 }

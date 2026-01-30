@@ -1,5 +1,7 @@
 "use client";
 import React, { useState } from "react";
+import { SyncStatus } from './ui/SyncStatus';
+
 import {
   FaHome,
   FaShoppingCart,
@@ -97,15 +99,24 @@ const Sidebar: React.FC = () => {
             </div>
           </div>
 
-          <nav className="flex-1 overflow-y-auto mt-5">
-            {sidebarItems.map((item, index) => (
-              <SidebarItem
-                key={index}
-                {...item}
-                isCollapsed={isCollapsed}
-              />
-            ))}
-          </nav>
+          <nav className="flex-1 overflow-y-auto mt-5 px-4"> 
+         {}
+         {!isCollapsed && (
+         <div className="mb-4">
+           <SyncStatus />
+         </div>
+        )}
+  
+          {}
+
+        {sidebarItems.map((item, index) => (
+         <SidebarItem
+         key={index}
+         {...item}
+         isCollapsed={isCollapsed}
+        />
+        ))}
+       </nav>
 
           <UserProfile name={user?.name || "User"} isCollapsed={isCollapsed} />
         </div>

@@ -1,23 +1,19 @@
 import { DBSchema } from "idb";
 
-/**
- * Represents a single customer order.
- * 'status' tracks the order's lifecycle (pending, completed, cancelled).
- * 'synced' is crucial for our offline-first strategy.
- */
 export interface Order {
   id: string;
-  status: "pending" | "completed" | "cancelled";
+  status: "pending" | "completed" | "cancelled" | "refunded";
+  paymentStatus: "unpaid" | "partial" | "paid" | "refunded";
   totalAmount: number;
+  paidAmount: number;
   customerName?: string;
   createdAt: string;
   updatedAt: string;
   synced: boolean;
+  isLocked: boolean; 
+  version: number;  
 }
 
-/**
- * Represents a single item within an order.
- */
 export interface LineItem {
   id: string;
   orderId: string;
@@ -27,42 +23,31 @@ export interface LineItem {
   price: number;
 }
 
-/**
- * Represents a payment attempt associated with an order.
- * This allows for handling partial payments or multiple payment methods.
- */
 export interface PaymentIntent {
   id: string;
   orderId: string;
   amount: number;
-  paymentMethod: "credit_card" | "paypal" | "bank_transfer";
-  status: "pending" | "completed" | "failed";
+  paymentMethod: "cash" | "stellar" | "credit_card";
+  status: "pending" | "completed" | "failed" | "refunded";
   createdAt: string;
   synced: boolean;
+  isPartial: boolean;
 }
 
 export interface MesaChainDBSchema extends DBSchema {
   orders: {
     key: string;
     value: Order;
-    indexes: {
-      "by-status": "status";
-      "by-synced": "synced";
-    };
+    indexes: { "by-synced": number };
   };
   LineItems: {
     key: string;
     value: LineItem;
-    indexes: {
-      "by-orderId": "orderId";
-    };
+    indexes: { "by-orderId": string };
   };
   PaymentIntent: {
     key: string;
     value: PaymentIntent;
-    indexes: {
-      "by-orderId": "orderId";
-      "by-synced": "synced";
-    };
+    indexes: { "by-orderId": string; "by-synced": number };
   };
 }
