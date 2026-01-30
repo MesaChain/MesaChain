@@ -1,9 +1,25 @@
 "use client";
-import { useRef, useEffect } from "react";
+import { useRef, useEffect, type MutableRefObject } from "react";
 import { useFormWizard } from "./useFormWizard";
 import type { FormStepProps } from "./types";
 import { cn } from "@/lib/utils";
 
+/**
+ * FormStep - A wrapper component for individual wizard steps
+ *
+ * Features:
+ * - Only renders children when the step is active
+ * - Handles focus management on step entry
+ * - Provides proper ARIA attributes
+ *
+ * Usage:
+ * ```tsx
+ * <FormStep stepId="personal-info">
+ *   <Input {...register("name")} />
+ *   <Input {...register("email")} />
+ * </FormStep>
+ * ```
+ */
 export function FormStep({ stepId, children, className }: FormStepProps) {
   const { currentStep, focusRef, getStepAriaLabel, steps, currentStepIndex } =
     useFormWizard();
@@ -12,6 +28,7 @@ export function FormStep({ stepId, children, className }: FormStepProps) {
   const isActive = currentStep?.id === stepId;
   const stepIndex = steps.findIndex((s) => s.id === stepId);
 
+  // Focus the step container when it becomes active
   useEffect(() => {
     if (isActive && stepRef.current) {
       const timeoutId = setTimeout(() => {
@@ -29,7 +46,9 @@ export function FormStep({ stepId, children, className }: FormStepProps) {
     <div
       ref={(node) => {
         stepRef.current = node;
-        focusRef.current = node;
+        if (focusRef && "current" in focusRef) {
+          (focusRef as MutableRefObject<HTMLElement | null>).current = node;
+        }
       }}
       className={cn("outline-none", className)}
       tabIndex={-1}
